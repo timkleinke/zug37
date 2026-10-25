@@ -158,7 +158,8 @@ def main(env=os.environ, now=None):
     try:
         workdir = state / "leer"
         workdir.mkdir(parents=True, exist_ok=True)
-        edition = check(extract(ask(workdir, prompt, dict(env))), names(repo))
+        clean = {k: v for k, v in env.items() if not k.startswith("Z37_TG_")}  # the model never sees the bot token
+        edition = check(extract(ask(workdir, prompt, clean)), names(repo))
     except Exception as e:  # noqa: BLE001 - one line, no content
         print(f"zug37-redaktion: {type(e).__name__} {e if isinstance(e, ValueError) else ''}".rstrip(), file=sys.stderr)
         return 1

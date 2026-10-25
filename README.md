@@ -18,15 +18,10 @@ Das Display auf meinem Schreibtisch (TickrMeter, 296 × 128, 1 Bit, eine weiße 
 ## Einrichten (MIF-Server, als root)
 
 ```
-git clone git@github.com:timkleinke/zug37.git /root/zug37 && cd /root/zug37
-./install.sh
+git clone git@github.com:timkleinke/zug37.git /root/zug37 && /root/zug37/install.sh
 ```
 
-Danach:
-1. Den Deploy-Key, den das Skript ausgibt, in `timkleinke/tim` unter Settings → Deploy keys eintragen, nur lesend.
-2. Den Token aus `claude setup-token` in `/etc/zug37.env` eintragen.
-3. `./install.sh start`, dann einmal `systemctl start zug37-redaktion.service`.
-4. Im TickrMeter-Konto eine neue App „Zug 37“ mit der Feed-URL anlegen, die das Skript ausgibt. Eine Vorschau hochladen und beim Senden `ledBrightness` setzen.
+Das Skript fragt nacheinander nach dem Deploy-Key (Logbuch nur lesen), dem Claude-Token (`claude setup-token` auf dem Mac) und optional dem Telegram-Bot. Danach macht es die erste Ausgabe und nennt die Feed-URL für die App „Zug 37“ im TickrMeter-Konto. Ein erneuter Aufruf aktualisiert alles und überspringt, was schon beantwortet ist.
 
 | Was | Befehl |
 |---|---|
