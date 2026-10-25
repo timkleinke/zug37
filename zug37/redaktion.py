@@ -1,6 +1,6 @@
 """One run of the Redaktion: update the logbook checkout, ask Claude Code, check the answer, write the edition.
 
-Started by zug37-redaktion.timer a few times a day. Environment:
+Started by zug37-redaktion.timer once a day (test phase: 28 days, Ideenbörse only, see TEST.md). Environment:
   Z37_STATE    state directory (default: $STATE_DIRECTORY, else ./out)
   Z37_REPO     checkout of timkleinke/tim (read-only deploy key); pulled before each run
   Z37_CLAUDE   path of the claude binary (default: claude)
@@ -28,7 +28,7 @@ TOOLS = "WebSearch"
 DENIED = "Bash Edit Write NotebookEdit Task Read Glob Grep WebFetch"
 FILES = ["redaktion/GRUENDUNG.md", "KURS.md", "ideen/README.md", "redaktion/fragen.md"]
 MAX_FILE = 20000
-RUBRIK = re.compile(r"^[A-ZÄÖÜ ]{2,14}$")
+RUBRIKEN = ("IDEENBÖRSE",)  # test phase: only the Ideenbörse (TEST.md)
 URL = re.compile(r"^https?://\S{4,400}$")
 
 
@@ -113,13 +113,13 @@ def check(e, banned=frozenset()):
     if not out["zeile"]:
         raise ValueError("zeile")
     rubrik = str(e.get("rubrik", "")).strip().upper()
-    if not RUBRIK.match(rubrik):
+    if rubrik not in RUBRIKEN:
         raise ValueError("rubrik")
     out["rubrik"] = rubrik
     quellen = e.get("quellen") or []
     if not isinstance(quellen, list) or len(quellen) > 6 or not all(isinstance(q, str) and URL.match(q) for q in quellen):
         raise ValueError("quellen")
-    if rubrik in ("IDEENBÖRSE", "FUND") and not quellen:
+    if not quellen:
         raise ValueError("quellen")
     out["quellen"] = quellen
     shown = f"{rubrik} {out['zeile']} {out['fuss']}"
@@ -128,6 +128,18 @@ def check(e, banned=frozenset()):
     out["kursiv"] = bool(e.get("kursiv"))
     out["licht"] = bool(e.get("licht"))
     return out
+
+
+def build_prompt(repo, state, now):
+    """The whole task: instructions, the logbook excerpt, the time and the editions so far.
+    The Sunday comparison hands exactly this text to Claude in the normal chat."""
+    local = now.astimezone(BERLIN)
+    h = history(state)
+    return (Path(__file__).with_name("redaktion.md").read_text()
+            + "\n## Das Logbuch (Auszug)\n\n" + context(repo) + "\n"
+            + f"\n## Jetzt\n\n{local:%d.%m.%Y, %H:%M} Uhr (Berlin). "
+            + f"Lampe heute schon {lights_today(state, now)}-mal an.\n\n## Bisherige Ausgaben\n\n"
+            + (json.dumps(h, ensure_ascii=False, indent=1) if h else "noch keine") + "\n")
 
 
 def ask(workdir, prompt, env):
@@ -154,12 +166,7 @@ def main(env=os.environ, now=None):
                        capture_output=True)
     except (subprocess.SubprocessError, OSError):
         print("zug37-redaktion: git pull failed, using the last checkout", file=sys.stderr)
-    local = now.astimezone(BERLIN)
-    prompt = (Path(__file__).with_name("redaktion.md").read_text()
-              + "\n## Das Logbuch (Auszug)\n\n" + context(repo) + "\n"
-              + f"\n## Jetzt\n\n{local:%A, %d.%m.%Y, %H:%M} Uhr (Berlin). "
-              + f"Lampe heute schon {lights_today(state, now)}-mal an.\n\n## Bisherige Ausgaben\n\n"
-              + (json.dumps(history(state), ensure_ascii=False, indent=1) if history(state) else "noch keine") + "\n")
+    prompt = build_prompt(repo, state, now)
     try:
         workdir = state / "leer"
         workdir.mkdir(parents=True, exist_ok=True)

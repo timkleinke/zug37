@@ -1,8 +1,8 @@
 [Unit]
-Description=Zug 37 Redaktion three times a day
+Description=Zug 37 Redaktion once a day (test phase, TEST.md)
 
 [Timer]
-OnCalendar=*-*-* 07,12,17:30:00 Europe/Berlin
+OnCalendar=*-*-* 07:30:00 Europe/Berlin
 RandomizedDelaySec=10min
 Unit=zug37-redaktion.service
 

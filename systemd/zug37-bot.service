@@ -1,0 +1,45 @@
+# Zug 37: Telegram as the measuring instrument (TEST.md). Talks only to api.telegram.org, calls no model.
+[Unit]
+Description=Zug 37 Telegram-Bewertung
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=zug37
+Group=zug37
+StateDirectory=zug37
+StateDirectoryMode=0700
+UMask=0077
+EnvironmentFile=/etc/zug37.env
+UnsetEnvironment=CLAUDE_CODE_OAUTH_TOKEN
+WorkingDirectory=/opt/zug37
+ExecStart=/usr/bin/python3 -s -B -m zug37.bot
+Restart=always
+RestartSec=30
+MemoryMax=256M
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectProc=invisible
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+IPAddressDeny=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 fc00::/7
+TemporaryFileSystem=/opt:ro
+BindReadOnlyPaths=/opt/zug37
+BindReadOnlyPaths=/run/systemd/resolve/resolv.conf:/run/systemd/resolve/stub-resolv.conf
+InaccessiblePaths=-/etc/nginx -/etc/letsencrypt -/var/www -/srv
+
+[Install]
+WantedBy=multi-user.target

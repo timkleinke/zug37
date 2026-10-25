@@ -151,38 +151,42 @@ if [ -z "$(getenv CLAUDE_CODE_OAUTH_TOKEN)" ]; then
   printf '%s' "$TOKEN" | setenv CLAUDE_CODE_OAUTH_TOKEN; unset TOKEN
 fi
 
-# --- 3. Telegram (optional) --------------------------------------------------------------------
+# --- 3. Telegram -------------------------------------------------------------------------------
 if [ -z "$(getenv Z37_TG_TOKEN)" ]; then
-  say "3/3  Telegram (Rückkanal, kann auch später)"
+  say "3/3  Telegram (die Bewertung im Test läuft darüber)"
   echo "In Telegram: @BotFather → /newbot → Name „Zug 37“ → Token kopieren."
-  read_secret TG "Bot-Token einfügen (unsichtbar) oder leer lassen zum Überspringen, dann Enter: "
+  read_secret TG "Bot-Token einfügen (unsichtbar), dann Enter: "
   if [ -n "$TG" ]; then
     [[ "$TG" =~ ^[0-9]{5,15}:[A-Za-z0-9_-]{30,60}$ ]] || die "Das sieht nicht wie ein Bot-Token aus (${#TG} Zeichen). ./install.sh erneut starten."
     printf '%s' "$TG" | setenv Z37_TG_TOKEN
-    echo "Schick deinem neuen Bot jetzt in Telegram eine Nachricht, z. B. /start."
-    CHAT=""
-    for i in $(seq 1 30); do
-      CHAT="$(TG="$TG" python3 - <<'PY'
+  fi
+  unset TG
+fi
+if [ -n "$(getenv Z37_TG_TOKEN)" ] && [ -z "$(getenv Z37_TG_CHAT)" ]; then
+  echo "Schick deinem Bot jetzt in Telegram eine Nachricht, z. B. /start (ich warte bis zu 2 Minuten)."
+  CHAT=""
+  for i in $(seq 1 30); do
+    CHAT="$(TG="$(getenv Z37_TG_TOKEN)" python3 - <<'PY'
 import json, os, urllib.request
 try:
     r = json.load(urllib.request.urlopen(f"https://api.telegram.org/bot{os.environ['TG']}/getUpdates", timeout=10))
-    ids = [u["message"]["chat"]["id"] for u in r.get("result", []) if "message" in u and u["message"]["chat"]["type"] == "private"]
-    print(ids[-1] if ids else "")
+    m = [u["message"] for u in r.get("result", []) if "message" in u and u["message"]["chat"]["type"] == "private"]
+    print(f'{m[-1]["chat"]["id"]} {m[-1]["chat"].get("first_name", "")}' if m else "")
 except Exception:
     print("")
 PY
 )"
-      [ -n "$CHAT" ] && break; sleep 4
-    done
-    unset TG
-    if [ -n "$CHAT" ]; then printf '%s' "$CHAT" | setenv Z37_TG_CHAT; echo "Verbunden."
-    else echo "Keine Nachricht gesehen. Später einfach ./install.sh erneut starten."; fi
-  fi
+    [ -n "$CHAT" ] && break; sleep 4
+  done
+  if [ -n "$CHAT" ]; then
+    printf '%s' "${CHAT%% *}" | setenv Z37_TG_CHAT; echo "Verbunden mit ${CHAT#* }."
+  else echo "Keine Nachricht gesehen. Später einfach ./install.sh erneut starten."; fi
 fi
 
 # --- Start ----------------------------------------------------------------------------------------
 systemctl enable --now zug37-anzeige.timer zug37-redaktion.timer >/dev/null 2>&1
-[ -f /etc/systemd/system/zug37-bot.service ] && systemctl enable --now zug37-bot.service >/dev/null 2>&1 || true
+if [ -n "$(getenv Z37_TG_CHAT)" ]; then systemctl enable zug37-bot.service >/dev/null 2>&1; systemctl restart zug37-bot.service
+else systemctl disable --now zug37-bot.service >/dev/null 2>&1 || true; fi
 systemctl start zug37-anzeige.service
 if [ ! -f "$HOMEDIR/state/ausgabe.json" ]; then
   say "Die Redaktion macht die erste Ausgabe (ein paar Minuten) ..."
