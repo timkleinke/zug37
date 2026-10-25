@@ -1,0 +1,10 @@
+[Unit]
+Description=Zug 37 Anzeige every 5 minutes
+
+[Timer]
+OnCalendar=*-*-* *:00/5:00
+AccuracySec=5s
+Unit=zug37-anzeige.service
+
+[Install]
+WantedBy=timers.target

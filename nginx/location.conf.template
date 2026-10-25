@@ -1,0 +1,22 @@
+# Zug 37: only feed.json and hash-named frames, static files. The random part of the path keeps it
+# from being found by chance; it is not protection. Same rules as the Signal Radar feed.
+location ^~ @PATH@ {
+    access_log off;
+    location ~ "^@PATH@(feed\.json|[0-9a-f]{64}\.bin)$" {
+        alias /var/www/zug37/$1;
+        limit_except GET { deny all; }
+        access_log off;
+        log_not_found off;
+        disable_symlinks on;
+        etag off;
+        if_modified_since off;
+        gzip off;
+        types { application/json json; application/octet-stream bin; }
+        default_type application/octet-stream;
+        add_header Cache-Control "no-cache" always;
+        add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "no-referrer" always;
+    }
+    return 404;
+}

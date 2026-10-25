@@ -1,0 +1,10 @@
+[Unit]
+Description=Zug 37 Redaktion three times a day
+
+[Timer]
+OnCalendar=*-*-* 07,12,17:30:00 Europe/Berlin
+RandomizedDelaySec=10min
+Unit=zug37-redaktion.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,31 @@
+# Zug 37: the Redaktion. Pulls the logbook (read-only deploy key), asks Claude Code (read and web only),
+# checks the answer and writes ausgabe.json. Writes nothing outside /var/lib/zug37.
+[Unit]
+Description=Zug 37 Redaktion
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=zug37
+Group=zug37
+StateDirectory=zug37
+StateDirectoryMode=0700
+UMask=0077
+EnvironmentFile=/etc/zug37.env
+Environment=HOME=/var/lib/zug37
+Environment=GIT_SSH_COMMAND=ssh -i /var/lib/zug37/.ssh/id_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/var/lib/zug37/.ssh/known_hosts
+WorkingDirectory=/opt/zug37
+ExecStart=/usr/bin/python3 -s -B -m zug37.redaktion
+TimeoutStartSec=30min
+MemoryMax=2G
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes

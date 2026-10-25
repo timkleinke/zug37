@@ -1,0 +1,33 @@
+# Zug 37: render the current edition and publish feed.json and the frame. No network, no model.
+[Unit]
+Description=Zug 37 Anzeige (render and publish)
+
+[Service]
+Type=oneshot
+User=zug37
+Group=zug37
+StateDirectory=zug37
+StateDirectoryMode=0700
+UMask=0027
+ReadWritePaths=/var/www/zug37
+EnvironmentFile=/etc/zug37.env
+WorkingDirectory=/opt/zug37
+ExecStart=/usr/bin/python3 -s -B -m zug37.anzeige
+TimeoutStartSec=60
+MemoryMax=256M
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+IPAddressDeny=any
+RestrictAddressFamilies=AF_UNIX
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
