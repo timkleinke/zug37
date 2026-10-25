@@ -40,43 +40,87 @@ class Bot(unittest.TestCase):
         self.d = Path(tempfile.mkdtemp())
         (self.d / "ausgabe.json").write_text(json.dumps(ED))
 
+    def tap(self, api, uid, idx=0, mid=1):
+        data = [c for c in api.calls if c[0] == "sendMessage" and "reply_markup" in c[1]][-1][1]["reply_markup"]["inline_keyboard"][0][idx]["callback_data"]
+        return {"update_id": uid, "callback_query": {"id": "q", "data": data, "message": {"message_id": mid, "chat": {"id": 42}}}}
+
     def test_sends_once_and_records_tap(self):
         api = FakeApi()
         bot.step(api, self.d, "42", T0, [])
         bot.step(api, self.d, "42", T0, [])
         sent = [c for c in api.calls if c[0] == "sendMessage"]
         self.assertEqual(len(sent), 1)
-        data = sent[0][1]["reply_markup"]["inline_keyboard"][0][0]["callback_data"]
-        self.assertLessEqual(len(data.encode()), 64)
-        tap = {"update_id": 7, "callback_query": {"id": "q", "data": data, "message": {"message_id": 1, "chat": {"id": 42}}}}
-        bot.step(api, self.d, "42", T0, [tap])
+        self.assertLessEqual(len(sent[0][1]["reply_markup"]["inline_keyboard"][0][0]["callback_data"].encode()), 64)
+        bot.step(api, self.d, "42", T0, [self.tap(api, 7)])
         self.assertEqual(bot.tally(self.d)["display"]["n"], 1)
         self.assertEqual(json.loads((self.d / "bot.json").read_text())["offset"], 8)
+
+    def test_retap_changes_verdict_and_errors_do_not_repeat(self):
+        class Flaky(FakeApi):
+            def __call__(self, method, **p):
+                super().__call__(method, **p)
+                if method in ("answerCallbackQuery", "editMessageReplyMarkup"):
+                    raise RuntimeError("400")
+        api = Flaky()
+        bot.step(api, self.d, "42", T0, [])
+        bot.step(api, self.d, "42", T0, [self.tap(api, 1, 0)])
+        bot.step(api, self.d, "42", T0, [self.tap(api, 2, 2)])
+        bot.step(api, self.d, "42", T0, [])
+        self.assertEqual(sum(1 for c in api.calls if c[0] == "sendMessage"), 1)
+        t = bot.tally(self.d)["display"]
+        self.assertEqual((t["n"], t["x"]), (0, 1))
+        self.assertEqual(json.loads((self.d / "bot.json").read_text())["offset"], 3)
 
     def test_foreign_chat_ignored(self):
         api = FakeApi()
         bot.step(api, self.d, "42", T0, [])
         tap = {"update_id": 1, "callback_query": {"id": "q", "data": "n|dX", "message": {"message_id": 1, "chat": {"id": 99}}}}
-        msg = {"update_id": 2, "message": {"chat": {"id": 99}, "text": "/stand"}}
+        msg = {"update_id": 2, "message": {"chat": {"id": 99, "type": "private"}, "text": "/stand"}}
         bot.step(api, self.d, "42", T0, [tap, msg])
         self.assertEqual(bot.tally(self.d)["display"]["n"], 0)
         self.assertFalse((self.d / "notizen.jsonl").exists())
 
-    def test_sunday_comparison_and_rating(self):
-        api = FakeApi()
+    def sunday(self, api, text_parts, silence=False):
         bot.step(api, self.d, "42", T0, [])
+        (self.d / "aufgabe.md").write_text("AUFGABE WÖRTLICH")
         sunday = T0 + timedelta(days=6, hours=3)  # Sunday 10:30 Berlin
-        bot.step(api, self.d, "42", sunday, [], prompt_for=lambda now: "AUFGABE")
-        bot.step(api, self.d, "42", sunday, [], prompt_for=lambda now: "AUFGABE")
-        self.assertEqual(len(api.docs), 1)
-        answer = {"update_id": 3, "message": {"chat": {"id": 42}, "text": "Antwort aus dem Chat"}}
-        bot.step(api, self.d, "42", sunday, [answer])
-        data = api.calls[-1][1]["reply_markup"]["inline_keyboard"][0][2]["callback_data"]
-        tap = {"update_id": 4, "callback_query": {"id": "q", "data": data, "message": {"message_id": 2, "chat": {"id": 42}}}}
-        bot.step(api, self.d, "42", sunday, [tap])
-        self.assertEqual(bot.tally(self.d)["chat"]["x"], 1)
+        import os
+        os.utime(self.d / "aufgabe.md", (sunday.timestamp(), sunday.timestamp()))
+        bot.step(api, self.d, "42", sunday, [])
+        bot.step(api, self.d, "42", sunday, [])
+        msgs = [{"update_id": 10 + i, "message": {"chat": {"id": 42, "type": "private"}, "text": p}} for i, p in enumerate(text_parts)]
+        bot.step(api, self.d, "42", sunday, msgs)
+        bot.step(api, self.d, "42", sunday + timedelta(minutes=2), [])
+        return sunday
 
-    def test_day_28_summary_once(self):
+    def test_sunday_same_task_and_joined_answer(self):
+        api = FakeApi()
+        self.sunday(api, ["Teil eins", "Teil zwei"])
+        self.assertEqual(api.docs, [("zug37-vergleich-2026-W44.md", "AUFGABE WÖRTLICH")])
+        v = [json.loads(l) for l in (self.d / "vergleich.jsonl").read_text().splitlines()]
+        self.assertEqual(v[0]["antwort"], "Teil eins\nTeil zwei")
+        api_tap = self.tap(api, 20, 1, mid=2)
+        bot.step(api, self.d, "42", T0 + timedelta(days=6, hours=4), [api_tap])
+        self.assertEqual(bot.tally(self.d)["chat"]["b"], 1)
+        self.assertFalse((self.d / "notizen.jsonl").exists())
+
+    def test_sunday_silence_does_not_count(self):
+        api = FakeApi()
+        self.sunday(api, ['```json\n{"art": "stille", "begruendung": "nichts"}\n```'])
+        self.assertIn("zählt nicht", api.calls[-1][1]["text"])
+        self.assertNotIn("reply_markup", api.calls[-1][1])
+
+    def test_long_detail_never_cuts_html(self):
+        e = {**ED, "detail": '"' * 1500, "quellen": ["https://example.org/" + "a&" * 150] * 6}
+        text = bot.edition_text(e)
+        self.assertLessEqual(len(text), bot.MAX_TEXT)
+        self.assertEqual(text.count("<a "), text.count("</a>"))
+
+    def test_unsafe_links_dropped(self):
+        e = {**ED, "quellen": ["https://github.com@evil.tld/x", "http://example.org", "https://exämple.org/", "https://ok.org/a"]}
+        self.assertEqual(bot.edition_text(e).count("<a "), 1)
+
+    def test_day_28_summary_once_after_edition(self):
         api = FakeApi()
         bot.step(api, self.d, "42", T0, [])
         later = T0 + timedelta(days=28)

@@ -26,7 +26,7 @@ BERLIN = ZoneInfo("Europe/Berlin")
 MAX_LIGHTS_PER_DAY = 2
 TOOLS = "WebSearch"
 DENIED = "Bash Edit Write NotebookEdit Task Read Glob Grep WebFetch"
-FILES = ["redaktion/GRUENDUNG.md", "KURS.md", "ideen/README.md", "redaktion/fragen.md"]
+FILES = ["redaktion/GRUENDUNG.md", "KURS.md", "ideen/README.md"]
 MAX_FILE = 20000
 RUBRIKEN = ("IDEENBÖRSE",)  # test phase: only the Ideenbörse (TEST.md)
 URL = re.compile(r"^https?://\S{4,400}$")
@@ -167,6 +167,9 @@ def main(env=os.environ, now=None):
     except (subprocess.SubprocessError, OSError):
         print("zug37-redaktion: git pull failed, using the last checkout", file=sys.stderr)
     prompt = build_prompt(repo, state, now)
+    state.mkdir(parents=True, exist_ok=True)
+    tmp = state / "aufgabe.md.tmp"  # word for word the task; the bot sends it for the Sunday comparison
+    tmp.write_text(prompt); os.replace(tmp, state / "aufgabe.md")
     try:
         workdir = state / "leer"
         workdir.mkdir(parents=True, exist_ok=True)
