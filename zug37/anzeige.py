@@ -1,6 +1,6 @@
 """One run of the display: read the current edition, render, publish the feed.
 
-Started every 15 minutes by zug37-anzeige.timer. No network, no model. Environment:
+Started every 5 minutes by zug37-anzeige.timer. No network, no model. Environment:
   Z37_STATE       state directory with ausgabe.json (default: $STATE_DIRECTORY, else ./out)
   Z37_PUBLIC_DIR, Z37_PUBLIC_URL  directory served by nginx and its https base URL ending in "/"
 

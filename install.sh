@@ -39,7 +39,7 @@ read_secret() {
 }
 
 # --- Voraussetzungen ---------------------------------------------------------------------------
-python3 -c 'import PIL' 2>/dev/null || die "python3 mit Pillow fehlt (apt install python3-pil)"
+/usr/bin/python3 -s -c 'import PIL' 2>/dev/null || die "python3 mit Pillow fehlt (apt install python3-pil)"
 for f in /usr/share/fonts/X11/Type1/c0648bt_.pfb /usr/share/fonts/X11/Type1/c0649bt_.pfb \
          /usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf; do
   [ -f "$f" ] || die "Schrift fehlt: $f"
@@ -86,11 +86,13 @@ EOT
   )
 fi
 getenv() { sed -n "s/^$1=//p" "$ENV_FILE" | head -n 1; }
-setenv() {  # value via stdin, never as an argument
-  python3 - "$ENV_FILE" "$1" <<'PY'
+setenv() {  # value via stdin (never an argument); handed to python through the environment,
+            # because python's own stdin is the heredoc with the script
+  local val; val="$(cat)"
+  VAL="$val" python3 - "$ENV_FILE" "$1" <<'PY'
 import os, sys
 path, key = sys.argv[1], sys.argv[2]
-val = sys.stdin.read().strip()
+val = os.environ["VAL"].strip()
 lines = [l for l in open(path).read().splitlines() if not l.startswith(key + "=")]
 lines.append(f"{key}={val}")
 tmp = path + ".new"
@@ -116,6 +118,11 @@ fi
 
 install -m 644 "$SRC"/systemd/zug37-*.service "$SRC"/systemd/zug37-*.timer /etc/systemd/system/
 systemctl daemon-reload
+
+# Claude Code must start for zug37 the way the service sees the system (no /root, /home, /opt).
+systemd-run --quiet --wait --pipe --collect -p User=zug37 -p ProtectHome=yes -p TemporaryFileSystem=/opt:ro \
+  -p BindReadOnlyPaths=/opt/zug37 -p Environment=HOME=$HOMEDIR -p Environment=DISABLE_AUTOUPDATER=1 \
+  "$CLAUDE_BIN" --version >/dev/null 2>&1 || die "Claude Code startet als zug37 nicht (Node fehlt systemweit oder ist zu alt?)"
 
 # --- 1. Logbuch lesen dürfen ---------------------------------------------------------------------
 if [ ! -d "$HOMEDIR/tim/.git" ]; then

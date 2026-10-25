@@ -14,6 +14,7 @@ StateDirectoryMode=0700
 UMask=0077
 EnvironmentFile=/etc/zug37.env
 Environment=HOME=/var/lib/zug37
+Environment=DISABLE_AUTOUPDATER=1
 Environment=GIT_SSH_COMMAND=ssh -i /var/lib/zug37/.ssh/id_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/var/lib/zug37/.ssh/known_hosts
 WorkingDirectory=/opt/zug37
 ExecStart=/usr/bin/python3 -s -B -m zug37.redaktion
@@ -38,4 +39,6 @@ IPAddressDeny=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.
 # MIF and other services stay out of sight
 TemporaryFileSystem=/opt:ro
 BindReadOnlyPaths=/opt/zug37
+# localhost is blocked, so the DNS stub 127.0.0.53 is too: resolve through the host's upstream servers
+BindReadOnlyPaths=/run/systemd/resolve/resolv.conf:/run/systemd/resolve/stub-resolv.conf
 InaccessiblePaths=-/etc/nginx -/etc/letsencrypt -/var/www -/srv

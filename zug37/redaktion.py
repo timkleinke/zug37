@@ -67,7 +67,10 @@ def context(repo):
     parts = []
     for p in paths:
         try:
-            parts.append(f"### {p.relative_to(repo)}\n\n{p.read_text()[:MAX_FILE]}")
+            text = p.read_text()
+            if len(text) > MAX_FILE:  # the logbook grows at the end: keep the newest part
+                text = "[… gekürzt, nur der neueste Teil …]\n" + text[-MAX_FILE:] if "logbuch" in p.parts else text[:MAX_FILE] + "\n[… gekürzt …]"
+            parts.append(f"### {p.relative_to(repo)}\n\n{text}")
         except OSError:
             continue
     return "\n\n".join(parts)
@@ -100,7 +103,7 @@ def check(e, banned=frozenset()):
     out = {"art": e["art"], "begruendung": str(e.get("begruendung", ""))[:800]}
     if e["art"] == "stille":
         return out
-    for key, limit in (("zeile", 140), ("fuss", 60), ("detail", 1500), ("bezug", 120)):
+    for key, limit in (("zeile", 90), ("fuss", 60), ("detail", 1500), ("bezug", 120)):
         v = e.get(key, "")
         if not isinstance(v, str) or len(v) > limit:
             raise ValueError(key)
@@ -117,8 +120,8 @@ def check(e, banned=frozenset()):
     if rubrik in ("IDEENBÖRSE", "FUND") and not quellen:
         raise ValueError("quellen")
     out["quellen"] = quellen
-    shown = f"{out['zeile']} {out['fuss']}"
-    if any(re.search(rf"\b{re.escape(n)}\b", shown) for n in banned):
+    shown = f"{rubrik} {out['zeile']} {out['fuss']}"
+    if any(re.search(rf"\b{re.escape(n)}\b", shown, re.I) for n in banned):
         raise ValueError("privat")
     out["kursiv"] = bool(e.get("kursiv"))
     out["licht"] = bool(e.get("licht"))
@@ -126,12 +129,12 @@ def check(e, banned=frozenset()):
 
 
 def ask(workdir, prompt, env):
-    cmd = [env.get("Z37_CLAUDE", "claude"), "-p", prompt, "--output-format", "json",
+    cmd = [env.get("Z37_CLAUDE", "claude"), "-p", "--output-format", "json",
            "--allowedTools", TOOLS, "--disallowedTools", DENIED, "--max-turns", "40",
            "--setting-sources", "user", "--strict-mcp-config"]
     if env.get("Z37_MODEL"):
         cmd += ["--model", env["Z37_MODEL"]]
-    r = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True, timeout=1500, env=env)
+    r = subprocess.run(cmd, cwd=workdir, input=prompt, capture_output=True, text=True, timeout=1500, env=env)
     if r.returncode != 0:
         raise RuntimeError(f"claude exit {r.returncode}")
     return json.loads(r.stdout)["result"]
@@ -161,7 +164,11 @@ def main(env=os.environ, now=None):
         clean = {k: v for k, v in env.items() if not k.startswith("Z37_TG_")}  # the model never sees the bot token
         edition = check(extract(ask(workdir, prompt, clean)), names(repo))
     except Exception as e:  # noqa: BLE001 - one line, no content
-        print(f"zug37-redaktion: {type(e).__name__} {e if isinstance(e, ValueError) else ''}".rstrip(), file=sys.stderr)
+        grund = f"{type(e).__name__} {e if isinstance(e, ValueError) else ''}".strip()
+        print(f"zug37-redaktion: {grund}", file=sys.stderr)
+        state.mkdir(parents=True, exist_ok=True)
+        with open(state / "verlauf.jsonl", "a") as f:
+            f.write(json.dumps({"zeit": now.isoformat(timespec="seconds"), "art": "fehler", "grund": grund[:80]}) + "\n")
         return 1
     edition["zeit"] = now.isoformat(timespec="seconds")
     if edition.get("licht") and lights_today(state, now) >= MAX_LIGHTS_PER_DAY:
