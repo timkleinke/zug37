@@ -25,6 +25,19 @@ die() { printf '\nAbbruch: %s\n' "$*" >&2; exit 1; }
 [ "$(id -u)" = 0 ] || die "bitte als root ausführen"
 [ -z "$(git -C "$SRC" status --porcelain)" ] || die "ungespeicherte Änderungen in $SRC"
 
+# Reads a pasted secret hidden. Swallows the rest of a paste that arrived on several lines, strips
+# bracketed-paste markers and whitespace, never prints the value. Usage: read_secret VAR "prompt"
+read_secret() {
+  local first rest more
+  read -rsp "$2" first; echo
+  rest=""
+  while IFS= read -rs -t 0.4 more; do rest="$rest$more"; done
+  first="$first$rest"
+  first="${first//$'\e[200~'/}"; first="${first//$'\e[201~'/}"
+  first="$(printf '%s' "$first" | tr -d '[:space:]')"
+  printf -v "$1" '%s' "$first"
+}
+
 # --- Voraussetzungen ---------------------------------------------------------------------------
 python3 -c 'import PIL' 2>/dev/null || die "python3 mit Pillow fehlt (apt install python3-pil)"
 for f in /usr/share/fonts/X11/Type1/c0648bt_.pfb /usr/share/fonts/X11/Type1/c0649bt_.pfb \
@@ -122,8 +135,12 @@ fi
 if [ -z "$(getenv CLAUDE_CODE_OAUTH_TOKEN)" ]; then
   say "2/3  Claude verbinden"
   echo "Auf deinem Mac im Terminal: claude setup-token  →  im Browser bestätigen, Token kopieren."
-  read -rsp "Token hier einfügen (unsichtbar), dann Enter: " TOKEN; echo
-  [[ "$TOKEN" =~ ^[A-Za-z0-9_-]{20,400}$ ]] || die "Das sieht nicht wie ein Token aus. ./install.sh erneut starten."
+  for i in 1 2 3; do
+    read_secret TOKEN "Token hier einfügen (unsichtbar), dann Enter: "
+    [[ "$TOKEN" =~ ^[A-Za-z0-9_-]{40,400}$ ]] && break
+    [ -z "$TOKEN" ] && echo "Nichts angekommen." || echo "Das sieht nicht wie ein Token aus (${#TOKEN} Zeichen angekommen, erwartet ein langer Token wie sk-ant-oat01-…)."
+    [ "$i" = 3 ] && die "Kein gültiger Token. ./install.sh erneut starten."
+  done
   printf '%s' "$TOKEN" | setenv CLAUDE_CODE_OAUTH_TOKEN; unset TOKEN
 fi
 
@@ -131,9 +148,9 @@ fi
 if [ -z "$(getenv Z37_TG_TOKEN)" ]; then
   say "3/3  Telegram (Rückkanal, kann auch später)"
   echo "In Telegram: @BotFather → /newbot → Name „Zug 37“ → Token kopieren."
-  read -rsp "Bot-Token einfügen (unsichtbar) oder leer lassen zum Überspringen, dann Enter: " TG; echo
+  read_secret TG "Bot-Token einfügen (unsichtbar) oder leer lassen zum Überspringen, dann Enter: "
   if [ -n "$TG" ]; then
-    [[ "$TG" =~ ^[0-9]{5,15}:[A-Za-z0-9_-]{30,60}$ ]] || die "Das sieht nicht wie ein Bot-Token aus."
+    [[ "$TG" =~ ^[0-9]{5,15}:[A-Za-z0-9_-]{30,60}$ ]] || die "Das sieht nicht wie ein Bot-Token aus (${#TG} Zeichen). ./install.sh erneut starten."
     printf '%s' "$TG" | setenv Z37_TG_TOKEN
     echo "Schick deinem neuen Bot jetzt in Telegram eine Nachricht, z. B. /start."
     CHAT=""
