@@ -29,7 +29,8 @@ DENIED = "Bash Edit Write NotebookEdit Task Read Glob Grep WebFetch"
 FILES = ["redaktion/GRUENDUNG.md", "KURS.md", "ideen/README.md"]
 MAX_FILE = 20000
 RUBRIKEN = ("IDEENBÖRSE",)  # test phase: only the Ideenbörse (TEST.md)
-URL = re.compile(r"^https?://\S{4,400}$")
+URL = re.compile(r"^https://\S{4,400}$")
+INLINE_URL = re.compile(r"(https?://|www\.)\S+")
 
 
 def history(state, n=30):
@@ -110,6 +111,7 @@ def check(e, banned=frozenset()):
         if not isinstance(v, str) or len(v) > limit:
             raise ValueError(key)
         out[key] = v.strip()
+    out["detail"] = INLINE_URL.sub("[Link in den Quellen]", out["detail"])  # links only via checked sources
     if not out["zeile"]:
         raise ValueError("zeile")
     rubrik = str(e.get("rubrik", "")).strip().upper()

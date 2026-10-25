@@ -27,3 +27,9 @@ Die Daten liegen auf dem Server in `/var/lib/zug37/state/`:
 - Telegram-Chats mit Bots sind nicht Ende-zu-Ende verschlüsselt. Die Sonntagsdatei enthält einen Auszug aus dem Logbuch (Kurs, Ideen, Projekte, aktueller Monat). Bei Verdacht den Bot-Token bei @BotFather erneuern und `./install.sh` neu starten.
 - Der Bot hört nur auf den Chat, der beim Einrichten den Einmal-Code geschickt hat und von Tim bestätigt wurde.
 - Auf ein bewertetes Item kann Tim nochmals tippen. Es gilt das Letzte.
+
+## Offen (aus den Prüfungen, bewusst nicht in diesem Stand)
+
+- Bot und Redaktion laufen unter demselben Nutzer. Ein kompromittierter Bot könnte den Claude-Token eines laufenden Redaktionslaufs lesen oder `ausgabe.json` schreiben. Abhilfe wäre ein eigener Nutzer für den Bot. Voraussetzung für den Angriff ist eine Lücke im Bot selbst, der nur mit Telegram spricht.
+- Am Sonntag nach 9 Uhr wird die erste freie Nachricht als Antwort aus dem Chat gewertet, und Dateien an den Bot werden ignoriert.
+- Nach Tag 28 laufen Redaktion und Sonntagsversand weiter, bis Tim entscheidet.

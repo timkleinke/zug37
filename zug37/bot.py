@@ -98,7 +98,8 @@ def safe_url(u):
         p = urlsplit(u)
     except ValueError:
         return False
-    return p.scheme == "https" and bool(p.hostname) and "@" not in p.netloc and p.netloc.isascii()
+    return (p.scheme == "https" and bool(p.hostname) and "@" not in p.netloc
+            and re.fullmatch(r"[A-Za-z0-9.-]+(:[0-9]{1,5})?", p.netloc) is not None)
 
 
 def edition_text(e):
@@ -149,6 +150,7 @@ def is_silence(text):
 def finish_answer(api, state, chat, st, now):
     """The chat's answer is complete: store it, then buttons (or 'does not count' for silence)."""
     p = st.pop("puffer")
+    save(state / "bot.json", st)  # stored once, even if the reply below fails
     append(state / "vergleich.jsonl", {"zeit": now.isoformat(timespec="seconds"), "woche": p["woche"], "antwort": p["text"]})
     if is_silence(p["text"]):
         api("sendMessage", chat_id=chat, text="Der Chat hat Stille gewählt. Das zählt nicht als Ausgabe, wie beim Display.")
@@ -194,6 +196,13 @@ def step(api, state, chat, now, updates):
     """One round. Saves the state after each change, so a failure never repeats a sent message."""
     path = state / "bot.json"
     st = load(path, {})
+    for u in updates:
+        st["offset"] = max(st.get("offset", 0), u["update_id"] + 1)
+        try:
+            handle(api, state, chat, st, now, u)
+        except Exception as ex:  # noqa: BLE001 - one bad update must not block the rest
+            print(f"zug37-bot: update {type(ex).__name__}", file=sys.stderr)
+        save(path, st)
     e = load(state / "ausgabe.json", None)
     if e and e.get("art") == "zeigen" and e.get("zeit") != st.get("gesendet"):
         api("sendMessage", chat_id=chat, text=edition_text(e), parse_mode="HTML",
@@ -217,13 +226,6 @@ def step(api, state, chat, now, updates):
         api("sendMessage", chat_id=chat, text="Tag 28. Ergebnis des Tests:\n\n" + tally_text(tally(state))
             + "\n\nRegel: Liefert das Display häufiger Neues und Relevantes als der Chat? Wenn nicht, wird nicht weiter ausgebaut.")
         st["ende"] = now.isoformat(timespec="seconds")
-        save(path, st)
-    for u in updates:
-        st["offset"] = max(st.get("offset", 0), u["update_id"] + 1)
-        try:
-            handle(api, state, chat, st, now, u)
-        except Exception as ex:  # noqa: BLE001 - one bad update must not block the rest
-            print(f"zug37-bot: update {type(ex).__name__}", file=sys.stderr)
         save(path, st)
     return st.get("offset", 0)
 
