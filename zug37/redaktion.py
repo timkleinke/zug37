@@ -7,9 +7,11 @@ Started by zug37-redaktion.timer a few times a day. Environment:
   Z37_MODEL    optional model name for claude
   CLAUDE_CODE_OAUTH_TOKEN  from `claude setup-token` (Tim's subscription)
 
-Claude Code may only read the checkout and use web search and fetch: no shell, no writing.
-The answer must be one JSON object; it is checked field by field before it is written to
-ausgabe.json. Every run, shown or silent, is appended to verlauf.jsonl.
+The logbook files the Redaktion needs are put into the prompt; Claude Code itself gets web search
+only (no file access, no fetch, no shell), runs in an empty directory and loads no project
+settings or MCP servers from anywhere but the zug37 user. The answer must be one JSON object; it is
+checked field by field (including names from menschen/ in what the public feed shows) before it is
+written to ausgabe.json. Every run, shown or silent, is appended to verlauf.jsonl.
 """
 import json
 import os
@@ -22,8 +24,10 @@ from zoneinfo import ZoneInfo
 
 BERLIN = ZoneInfo("Europe/Berlin")
 MAX_LIGHTS_PER_DAY = 2
-TOOLS = "Read Glob Grep WebSearch WebFetch"
-DENIED = "Bash Edit Write NotebookEdit Task"
+TOOLS = "WebSearch"
+DENIED = "Bash Edit Write NotebookEdit Task Read Glob Grep WebFetch"
+FILES = ["redaktion/GRUENDUNG.md", "KURS.md", "ideen/README.md", "redaktion/fragen.md"]
+MAX_FILE = 20000
 RUBRIK = re.compile(r"^[A-ZÄÖÜ ]{2,14}$")
 URL = re.compile(r"^https?://\S{4,400}$")
 
@@ -55,13 +59,41 @@ def lights_today(state, now):
     return n
 
 
+def context(repo):
+    """The logbook files for the prompt: fixed files, all project pages, the newest month of the logbook."""
+    paths = [repo / f for f in FILES] + sorted((repo / "projekte").glob("*.md"))
+    months = sorted((repo / "logbuch").glob("*.md"))
+    paths += months[-1:]
+    parts = []
+    for p in paths:
+        try:
+            parts.append(f"### {p.relative_to(repo)}\n\n{p.read_text()[:MAX_FILE]}")
+        except OSError:
+            continue
+    return "\n\n".join(parts)
+
+
+def names(repo):
+    """Words that must not appear on the public display: the people in menschen/ (not Tim himself)."""
+    out = set()
+    for p in (repo / "menschen").glob("*.md"):
+        if p.name == "tim.md":
+            continue
+        try:
+            title = p.read_text().splitlines()[0].lstrip("# ")
+        except (OSError, IndexError):
+            continue
+        out.update(w for w in re.findall(r"[A-Za-zÄÖÜäöüß]{3,}", title) if w[0].isupper())
+    return out
+
+
 def extract(text):
     m = re.findall(r"```json\s*(\{.*?\})\s*```", text, re.S)
     raw = m[-1] if m else text[text.find("{"):text.rfind("}") + 1]
     return json.loads(raw)
 
 
-def check(e):
+def check(e, banned=frozenset()):
     """Returns the cleaned edition or raises ValueError with the field name."""
     if not isinstance(e, dict) or e.get("art") not in ("zeigen", "stille"):
         raise ValueError("art")
@@ -85,17 +117,21 @@ def check(e):
     if rubrik in ("IDEENBÖRSE", "FUND") and not quellen:
         raise ValueError("quellen")
     out["quellen"] = quellen
+    shown = f"{out['zeile']} {out['fuss']}"
+    if any(re.search(rf"\b{re.escape(n)}\b", shown) for n in banned):
+        raise ValueError("privat")
     out["kursiv"] = bool(e.get("kursiv"))
     out["licht"] = bool(e.get("licht"))
     return out
 
 
-def ask(repo, prompt, env):
+def ask(workdir, prompt, env):
     cmd = [env.get("Z37_CLAUDE", "claude"), "-p", prompt, "--output-format", "json",
-           "--allowedTools", TOOLS, "--disallowedTools", DENIED, "--max-turns", "40"]
+           "--allowedTools", TOOLS, "--disallowedTools", DENIED, "--max-turns", "40",
+           "--setting-sources", "user", "--strict-mcp-config"]
     if env.get("Z37_MODEL"):
         cmd += ["--model", env["Z37_MODEL"]]
-    r = subprocess.run(cmd, cwd=repo, capture_output=True, text=True, timeout=1500, env=env)
+    r = subprocess.run(cmd, cwd=workdir, capture_output=True, text=True, timeout=1500, env=env)
     if r.returncode != 0:
         raise RuntimeError(f"claude exit {r.returncode}")
     return json.loads(r.stdout)["result"]
@@ -115,11 +151,14 @@ def main(env=os.environ, now=None):
         print("zug37-redaktion: git pull failed, using the last checkout", file=sys.stderr)
     local = now.astimezone(BERLIN)
     prompt = (Path(__file__).with_name("redaktion.md").read_text()
+              + "\n## Das Logbuch (Auszug)\n\n" + context(repo) + "\n"
               + f"\n## Jetzt\n\n{local:%A, %d.%m.%Y, %H:%M} Uhr (Berlin). "
               + f"Lampe heute schon {lights_today(state, now)}-mal an.\n\n## Bisherige Ausgaben\n\n"
               + (json.dumps(history(state), ensure_ascii=False, indent=1) if history(state) else "noch keine") + "\n")
     try:
-        edition = check(extract(ask(repo, prompt, dict(env))))
+        workdir = state / "leer"
+        workdir.mkdir(parents=True, exist_ok=True)
+        edition = check(extract(ask(workdir, prompt, dict(env))), names(repo))
     except Exception as e:  # noqa: BLE001 - one line, no content
         print(f"zug37-redaktion: {type(e).__name__} {e if isinstance(e, ValueError) else ''}".rstrip(), file=sys.stderr)
         return 1

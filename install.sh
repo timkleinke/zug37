@@ -43,14 +43,16 @@ done
 # Claude Code must be runnable by the zug37 user, so not from root's or another user's home.
 CLAUDE_BIN="$(command -v claude || true)"
 case "$CLAUDE_BIN" in
-  ""|/root/*|/home/*) echo "claude not installed system-wide; run: npm install -g @anthropic-ai/claude-code" >&2; exit 1 ;;
+  ""|/root/*|/home/*|/opt/*) echo "claude not installed system-wide; run: npm install -g @anthropic-ai/claude-code" >&2; exit 1 ;;
 esac
 
 id -u zug37 >/dev/null 2>&1 || useradd --system --user-group --home-dir "$HOMEDIR" --shell /usr/sbin/nologin zug37
 install -d -o zug37 -g zug37 -m 700 "$HOMEDIR" "$HOMEDIR/.ssh" "$HOMEDIR/state"
-if [ ! -f "$HOMEDIR/.ssh/id_ed25519" ]; then
-  sudo -u zug37 ssh-keygen -q -t ed25519 -N "" -C "zug37-redaktion (read-only)" -f "$HOMEDIR/.ssh/id_ed25519"
-  ssh-keyscan -t ed25519 github.com 2>/dev/null > "$HOMEDIR/.ssh/known_hosts"
+[ -f "$HOMEDIR/.ssh/id_ed25519" ] || sudo -u zug37 ssh-keygen -q -t ed25519 -N "" -C "zug37-redaktion (read-only)" -f "$HOMEDIR/.ssh/id_ed25519"
+if [ ! -s "$HOMEDIR/.ssh/known_hosts" ]; then
+  ssh-keyscan -t ed25519 github.com 2>/dev/null > "$HOMEDIR/.ssh/known_hosts.new"
+  [ -s "$HOMEDIR/.ssh/known_hosts.new" ] || { echo "ssh-keyscan github.com failed" >&2; exit 1; }
+  mv "$HOMEDIR/.ssh/known_hosts.new" "$HOMEDIR/.ssh/known_hosts"
   chown zug37:zug37 "$HOMEDIR/.ssh/known_hosts"; chmod 600 "$HOMEDIR/.ssh/known_hosts"
 fi
 
@@ -83,10 +85,10 @@ SITE="$(grep -l 'include snippets/tickrmeter-signal-radar.conf;' /etc/nginx/site
 if [ -z "$SITE" ]; then
   echo "could not find the $HOST server block; add 'include snippets/zug37.conf;' there by hand" >&2
 elif ! grep -q 'include snippets/zug37.conf;' "$SITE"; then
-  REAL="$(readlink -f "$SITE")"; cp -p "$REAL" "$REAL.vor-zug37"
+  REAL="$(readlink -f "$SITE")"; BACKUP="/var/backups/nginx-$(basename "$REAL").vor-zug37"; cp -p "$REAL" "$BACKUP"
   sed -i 's|^\(\s*\)include snippets/tickrmeter-signal-radar.conf;|&\n\1include snippets/zug37.conf;|' "$REAL"
   if nginx -t 2>/dev/null; then systemctl reload nginx; echo "nginx: zug37 feed added to $REAL"
-  else cp -p "$REAL.vor-zug37" "$REAL"; echo "nginx -t failed, change reverted" >&2; exit 1; fi
+  else cp -p "$BACKUP" "$REAL"; echo "nginx -t failed, change reverted" >&2; exit 1; fi
 fi
 
 install -m 644 "$SRC"/systemd/zug37-*.service "$SRC"/systemd/zug37-*.timer /etc/systemd/system/

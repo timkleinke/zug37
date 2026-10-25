@@ -29,3 +29,13 @@ ProtectKernelTunables=yes
 ProtectKernelModules=yes
 ProtectControlGroups=yes
 LockPersonality=yes
+ProtectProc=invisible
+ProtectKernelLogs=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+# nothing on this machine or in private networks, only the internet
+IPAddressDeny=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 fc00::/7
+# MIF and other services stay out of sight
+TemporaryFileSystem=/opt:ro
+BindReadOnlyPaths=/opt/zug37
+InaccessiblePaths=-/etc/nginx -/etc/letsencrypt -/var/www -/srv
