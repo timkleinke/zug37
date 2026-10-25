@@ -122,7 +122,7 @@ systemctl daemon-reload
 # Claude Code must start for zug37 the way the service sees the system (no /root, /home, /opt).
 systemd-run --quiet --wait --pipe --collect -p User=zug37 -p ProtectHome=yes -p TemporaryFileSystem=/opt:ro \
   -p BindReadOnlyPaths=/opt/zug37 -p Environment=HOME=$HOMEDIR -p Environment=DISABLE_AUTOUPDATER=1 \
-  "$CLAUDE_BIN" --version >/dev/null 2>&1 || die "Claude Code startet als zug37 nicht (Node fehlt systemweit oder ist zu alt?)"
+  "$(getenv Z37_CLAUDE)" --version >/dev/null 2>&1 || die "Claude Code startet als zug37 nicht (Node fehlt systemweit oder ist zu alt?)"
 
 # --- 1. Logbuch lesen dürfen ---------------------------------------------------------------------
 if [ ! -d "$HOMEDIR/tim/.git" ]; then

@@ -43,6 +43,8 @@ def history(state, n=30):
             e = json.loads(line)
         except ValueError:
             continue
+        if e.get("art") == "fehler":
+            continue
         out.append({k: e.get(k) for k in ("zeit", "art", "rubrik", "zeile", "bezug", "licht")})
     return out
 
