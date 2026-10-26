@@ -13,6 +13,9 @@ SANS = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
 SANS_B = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
 SERIF = "/usr/share/fonts/X11/Type1/c0648bt_.pfb"     # Bitstream Charter
 SERIF_I = "/usr/share/fonts/X11/Type1/c0649bt_.pfb"   # Bitstream Charter Italic
+SERIF_B = "/usr/share/fonts/X11/Type1/c0632bt_.pfb"   # Bitstream Charter Bold: no hairlines, reads clean in 1 bit
+SERIF_BI = "/usr/share/fonts/X11/Type1/c0633bt_.pfb"  # Bitstream Charter Bold Italic
+HEAD_SIZE, HEAD_LEAD, HEAD_TOP = 21, 25, 28
 ELLIPSIS = " …"
 
 
@@ -106,16 +109,16 @@ def screen_item(rubrik, zeile, fuss, datum, kursiv=False, hervorheben=False):
     """One thing in the foreground: rubric, a headline of up to three lines, a footer."""
     im, d = new()
     header(d, rubrik, hervorheben)
-    f = F(SERIF_I if kursiv else SERIF, 18)
+    f = F(SERIF_BI if kursiv else SERIF_B, HEAD_SIZE)
     for k, line in enumerate(wrap(d, zeile, f, W - 16, 3)):
-        d.text((8, 31 + k * 21), line, font=f, fill=1)
+        d.text((8, HEAD_TOP + k * HEAD_LEAD), line, font=f, fill=1)
     fs = F(SANS, 10)
     wd = d.textlength(datum, font=fs) if datum else 0
-    if datum: d.text((W - 8 - wd, 110), datum, font=fs, fill=1)
+    if datum: d.text((W - 8 - wd, 112), datum, font=fs, fill=1)
     if fuss:
         maxw = W - 16 - wd - 10
         if d.textlength(fuss, font=fs) > maxw: fuss = fit(d, fuss, fs, maxw, "…")
-        d.text((8, 110), fuss, font=fs, fill=1)
+        d.text((8, 112), fuss, font=fs, fill=1)
     return export(im)
 
 

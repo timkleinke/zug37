@@ -55,7 +55,7 @@ def build(edition, now):
     light = bool(edition.get("licht")) and not night and now - at < timedelta(hours=LIGHT_HOURS)
     raw, png = render.screen_item(
         render.drawable(edition["rubrik"], render.SANS_B, 9, 16).upper(),
-        render.drawable(edition["zeile"], render.SERIF_I if edition.get("kursiv") else render.SERIF, 18, 160),
+        render.drawable(edition["zeile"], render.SERIF_BI if edition.get("kursiv") else render.SERIF_B, render.HEAD_SIZE, 160),
         render.drawable(edition.get("fuss", ""), render.SANS, 10, 60),
         datum, kursiv=bool(edition.get("kursiv")), hervorheben=light)
     return raw, png, LED_ON if light else LED_OFF
