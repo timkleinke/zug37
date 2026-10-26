@@ -29,6 +29,7 @@ Das Skript fragt nacheinander nach dem Deploy-Key (Logbuch nur lesen), dem Claud
 | Was | Befehl |
 |---|---|
 | jetzt eine Ausgabe | `systemctl start zug37-redaktion.service` |
+| Vorschau-Links fürs TickrMeter-Konto | `/root/zug37/vorschau.sh` |
 | letzte Ausgabe lesen | `cat /var/lib/zug37/state/ausgabe.json` |
 | Protokoll | `journalctl -u zug37-redaktion -u zug37-anzeige` |
 | anhalten | `systemctl disable --now zug37-redaktion.timer zug37-anzeige.timer zug37-bot.service` |

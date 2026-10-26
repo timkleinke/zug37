@@ -227,5 +227,5 @@ fi
 say "Fertig ($REV)."
 echo "Letzter Schritt im TickrMeter-Konto: neue App „Zug 37“, Feed-URL:"
 echo "  ${URL}feed.json"
-echo "Vorschau hochladen wie bei Signal Radar, beim Senden die LED-Helligkeit setzen."
+echo "Vorschau: $SRC/vorschau.sh zeigt die beiden Download-Links. Beim Senden die LED-Helligkeit setzen."
 echo "Updates später: cd $SRC && git pull && ./install.sh"
