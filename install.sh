@@ -51,15 +51,16 @@ for f in /usr/share/fonts/X11/Type1/c0648bt_.pfb /usr/share/fonts/X11/Type1/c064
          /usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf; do
   [ -f "$f" ] || die "Schrift fehlt: $f"
 done
-CLAUDE_BIN="$(command -v claude || true)"
-case "$CLAUDE_BIN" in
-  ""|/root/*|/home/*|/opt/*)
-    command -v npm >/dev/null || die "Claude Code fehlt systemweit, und npm ist nicht da"
-    say "Installiere Claude Code systemweit (npm) ..."
-    npm install -g --silent @anthropic-ai/claude-code >/dev/null
-    CLAUDE_BIN="$(PATH=/usr/local/bin:/usr/bin command -v claude || true)"
-    case "$CLAUDE_BIN" in ""|/root/*|/home/*|/opt/*) die "Claude Code liegt nicht systemweit: $CLAUDE_BIN";; esac ;;
-esac
+# Claude Code for the zug37 user: only a system-wide install counts. Root's own toolchain (e.g. nvm
+# under /root) is never touched, so other services on this server keep their Claude version.
+CLAUDE_BIN="$(PATH=/usr/local/bin:/usr/bin command -v claude || true)"
+if [ -z "$CLAUDE_BIN" ]; then
+  [ -x /usr/bin/npm ] || die "Claude Code fehlt systemweit, und es gibt kein System-npm (/usr/bin/npm)"
+  say "Installiere Claude Code systemweit (System-npm) ..."
+  /usr/bin/npm install -g --silent @anthropic-ai/claude-code >/dev/null
+  CLAUDE_BIN="$(PATH=/usr/local/bin:/usr/bin command -v claude || true)"
+  [ -n "$CLAUDE_BIN" ] || die "Claude Code liegt danach nicht systemweit"
+fi
 
 # --- Nutzer, Schlüssel, Code ---------------------------------------------------------------------
 id -u zug37 >/dev/null 2>&1 || useradd --system --user-group --home-dir "$HOMEDIR" --shell /usr/sbin/nologin zug37
