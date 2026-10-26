@@ -140,5 +140,34 @@ class Anzeige(unittest.TestCase):
         self.assertEqual(feed["led"], {"mode": "off", "color": "off"})
 
 
+class Abwechslung(unittest.TestCase):
+    def setUp(self):
+        import hashlib
+        self.d = Path(tempfile.mkdtemp()); self.pub = self.d / "pub"; self.pub.mkdir(); self.sr = self.d / "sr"; self.sr.mkdir()
+        (self.d / "ausgabe.json").write_text(json.dumps(ED))  # edition at 07:30 Berlin
+        self.srraw = bytes([0x55]) * 4736
+        sha = hashlib.sha256(self.srraw).hexdigest()
+        (self.sr / f"{sha}.bin").write_bytes(self.srraw)
+        (self.sr / "feed.json").write_text(json.dumps({"v": 1, "frame": {"sha256": sha}, "led": {"mode": "solid", "color": "white"}}))
+        self.env = {"Z37_STATE": str(self.d), "Z37_PUBLIC_DIR": str(self.pub), "Z37_PUBLIC_URL": "https://h.example/z/", "Z37_SR_DIR": str(self.sr)}
+
+    def shown(self, minutes_after_edition):
+        anzeige.main(self.env, now=T0 + timedelta(minutes=minutes_after_edition))
+        feed = json.loads((self.pub / "feed.json").read_text())
+        return (self.pub / f"{feed['frame']['sha256']}.bin").read_bytes() == self.srraw, feed["led"]
+
+    def test_alone_first_then_turns_and_shared_light(self):
+        self.assertFalse(self.shown(30)[0])           # 08:00, edition still alone
+        a, b = self.shown(120)[0], self.shown(135)[0]  # 09:30 and 09:45: one each
+        self.assertNotEqual(a, b)
+        self.assertEqual(self.shown(120)[1], {"mode": "solid", "color": "white"})
+
+    def test_evening_and_broken_feed_keep_zug37(self):
+        self.assertFalse(self.shown(12 * 60 + 15)[0])  # 19:45 Berlin
+        (self.sr / "feed.json").write_text("kaputt")
+        self.assertFalse(self.shown(135)[0])
+        self.assertFalse(self.shown(120)[0])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -10,6 +10,9 @@ StateDirectory=zug37
 StateDirectoryMode=0700
 UMask=0027
 ReadWritePaths=/var/www/zug37
+# read the published Signal Radar frame (0640, group www-data) to take turns with it; no network
+SupplementaryGroups=www-data
+ReadOnlyPaths=-/var/www/tickrmeter-signal-radar
 EnvironmentFile=/etc/zug37.env
 UnsetEnvironment=CLAUDE_CODE_OAUTH_TOKEN Z37_TG_TOKEN
 WorkingDirectory=/opt/zug37

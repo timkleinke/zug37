@@ -16,6 +16,7 @@ Zurzeit im **Testbetrieb** bis Tag 28, Bedingungen in [TEST.md](TEST.md).
 - Die Anzeige hat kein Netz. Der Bot spricht nur mit Telegram und ruft kein Modell auf.
 - Die Lampe leuchtet weiß bis zu drei Stunden nach einer Ausgabe mit `licht`, höchstens zweimal am Tag und nie zwischen 21 und 7 Uhr.
 - Bei Stille bleibt die letzte Ausgabe stehen.
+- Abwechslung mit Signal Radar: Eine neue Ausgabe steht 90 Minuten allein. Danach wechseln sich Zug 37 und Signal Radar zwischen 8 und 19 Uhr alle 15 Minuten ab. Das Bild von Signal Radar kommt unverändert aus dessen Feed. Die Lampe leuchtet, wenn einer der beiden sie will.
 - Der Feed ist öffentlich unter einem zufälligen Pfad. Auf dem Display stehen deshalb nur Schlagzeilen, Namen aus `menschen/` werden abgewiesen. Details und Quellen gehen nur an Tims Telegram.
 
 ## Einrichten (MIF-Server, als root)

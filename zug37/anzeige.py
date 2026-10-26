@@ -3,10 +3,16 @@
 Started every 5 minutes by zug37-anzeige.timer. No network, no model. Environment:
   Z37_STATE       state directory with ausgabe.json (default: $STATE_DIRECTORY, else ./out)
   Z37_PUBLIC_DIR, Z37_PUBLIC_URL  directory served by nginx and its https base URL ending in "/"
+  Z37_SR_DIR      optional: the published Signal Radar feed directory, for taking turns with it
 
 The edition (ausgabe.json) comes from the Redaktion. "stille" keeps the last shown edition.
 The LED is white for LIGHT_HOURS after an edition with licht=true, never at night, else off.
 If anything fails, nothing is replaced and the exit code is 1: the last good frame stays.
+
+Taking turns with Signal Radar (the device shows one app only): from 8 to 19 o'clock, once a new
+edition has stood alone for ALONE_MINUTES, the two alternate in 15-minute slots. The Signal Radar
+frame is taken unchanged from its own published feed; the light is on if either feed wants it.
+If that feed is missing or broken, Zug 37 simply stays.
 """
 import hashlib
 import json
@@ -27,6 +33,8 @@ KEEP_FRAMES = 4
 PUBLIC_URL = re.compile(r"^https://[a-z0-9.-]+(?::[0-9]{1,5})?/[A-Za-z0-9/_-]*/$")
 LED_ON = {"mode": "solid", "color": "white"}
 LED_OFF = {"mode": "off", "color": "off"}
+ALONE_MINUTES = 90
+TURNS_FROM, TURNS_UNTIL = 8, 19
 
 
 def write_atomic(path, content):
@@ -61,6 +69,33 @@ def build(edition, now):
     return raw, png, LED_ON if light else LED_OFF
 
 
+def signal_radar(sr_dir):
+    """(frame bytes, led) of the current Signal Radar frame, or None. Checked like the device would."""
+    if not sr_dir:
+        return None
+    try:
+        feed = json.loads((Path(sr_dir) / "feed.json").read_text())
+        sha = feed["frame"]["sha256"]
+        if not FRAME_FILE.match(f"{sha}.bin"):
+            return None
+        raw = (Path(sr_dir) / f"{sha}.bin").read_bytes()
+        if len(raw) != render.FRAME_BYTES or hashlib.sha256(raw).hexdigest() != sha:
+            return None
+        return raw, feed.get("led") if feed.get("led") in (LED_ON, LED_OFF) else LED_OFF
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def turn_for_signal_radar(edition, now):
+    """True in the slots that belong to Signal Radar."""
+    local = now.astimezone(BERLIN)
+    if not (TURNS_FROM <= local.hour < TURNS_UNTIL):
+        return False
+    if edition and edition.get("zeit") and now - datetime.fromisoformat(edition["zeit"]) < timedelta(minutes=ALONE_MINUTES):
+        return False
+    return (local.hour * 60 + local.minute) // 15 % 2 == 1
+
+
 def publish(public_dir, base_url, raw, observed, led):
     sha = hashlib.sha256(raw).hexdigest()
     frame = public_dir / f"{sha}.bin"
@@ -91,6 +126,12 @@ def main(env=os.environ, now=None):
         if edition and edition.get("art") == "stille":
             edition = load(state / "gezeigt.json")
         raw, png, led = build(edition, now)
+        sr = signal_radar(env.get("Z37_SR_DIR"))
+        if sr:
+            if turn_for_signal_radar(edition, now):
+                raw = sr[0]
+            if sr[1] == LED_ON:
+                led = LED_ON
         utc = now.astimezone(timezone.utc)
         observed = f"{utc:%Y-%m-%dT%H:%M:%S}.{utc.microsecond // 1000:03d}Z"
         png.save(state / "frame.png.tmp", "PNG"); os.replace(state / "frame.png.tmp", state / "frame.png")

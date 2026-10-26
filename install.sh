@@ -110,6 +110,10 @@ os.replace(tmp, path)
 PY
 }
 for k in Z37_TG_TOKEN Z37_TG_CHAT; do grep -q "^$k=" "$ENV_FILE" || printf '' | setenv "$k"; done
+# take turns with Signal Radar on the same device, if its feed is published on this server
+if [ -d /var/www/tickrmeter-signal-radar ] && ! grep -q '^Z37_SR_DIR=' "$ENV_FILE"; then
+  printf '%s' /var/www/tickrmeter-signal-radar | setenv Z37_SR_DIR
+fi
 
 # --- Feed: Verzeichnis und nginx -----------------------------------------------------------------
 URL="$(getenv Z37_PUBLIC_URL)"; URL_PATH="/${URL#https://*/}"
