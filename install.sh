@@ -31,11 +31,18 @@ read_secret() {
   local first rest more
   read -rsp "$2" first; echo
   rest=""
-  while IFS= read -rs -t 0.4 more; do rest="$rest$more"; done
-  first="$first$rest"
-  first="${first//$'\e[200~'/}"; first="${first//$'\e[201~'/}"
-  first="$(printf '%s' "$first" | tr -d '[:space:]')"
-  printf -v "$1" '%s' "$first"
+  while IFS= read -rs -t 0.6 more; do rest="$rest$more"; done
+  printf -v "$1" '%s' "$first$rest"
+}
+# Pulls a Claude token out of whatever arrived: line breaks, indentation, box characters or a double
+# paste do not matter. Prints the first sk-ant-… token or nothing.
+extract_token() {
+  RAW="$1" python3 - <<'PY'
+import os, re
+clean = re.sub(r"[^A-Za-z0-9_-]", "", os.environ["RAW"].replace("\x1b[200~", "").replace("\x1b[201~", ""))
+m = re.findall(r"sk-ant-[A-Za-z0-9_-]+?(?=sk-ant-|$)", clean)
+print(m[0] if m and len(m[0]) >= 60 else "")
+PY
 }
 
 # --- Voraussetzungen ---------------------------------------------------------------------------
@@ -143,9 +150,19 @@ if [ -z "$(getenv CLAUDE_CODE_OAUTH_TOKEN)" ]; then
   say "2/3  Claude verbinden"
   echo "Auf deinem Mac im Terminal: claude setup-token  →  im Browser bestätigen, Token kopieren."
   for i in 1 2 3; do
-    read_secret TOKEN "Token hier einfügen (unsichtbar), dann Enter: "
-    [[ "$TOKEN" =~ ^[A-Za-z0-9_-]{40,400}$ ]] && break
-    [ -z "$TOKEN" ] && echo "Nichts angekommen." || echo "Das sieht nicht wie ein Token aus (${#TOKEN} Zeichen angekommen, erwartet ein langer Token wie sk-ant-oat01-…)."
+    read_secret RAWTOKEN "Token hier einfügen (unsichtbar), dann Enter: "
+    TOKEN="$(extract_token "$RAWTOKEN")"; unset RAWTOKEN
+    if [ -n "$TOKEN" ]; then
+      echo "Prüfe den Token mit einer kurzen Anfrage an Claude ..."
+      if CLAUDE_CODE_OAUTH_TOKEN="$TOKEN" DISABLE_AUTOUPDATER=1 sudo -H -u zug37 --preserve-env=CLAUDE_CODE_OAUTH_TOKEN,DISABLE_AUTOUPDATER \
+           "$(getenv Z37_CLAUDE)" -p "Antworte nur mit OK" --max-turns 1 --setting-sources user --strict-mcp-config </dev/null >/dev/null 2>&1; then
+        echo "Token funktioniert."; break
+      fi
+      echo "Claude nimmt diesen Token nicht an (unvollständig kopiert?)."
+    else
+      echo "Kein Token erkannt. Er beginnt mit sk-ant-oat01- und reicht oft über zwei Zeilen."
+    fi
+    TOKEN=""
     [ "$i" = 3 ] && die "Kein gültiger Token. ./install.sh erneut starten."
   done
   printf '%s' "$TOKEN" | setenv CLAUDE_CODE_OAUTH_TOKEN; unset TOKEN
