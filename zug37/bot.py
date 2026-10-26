@@ -205,7 +205,8 @@ def step(api, state, chat, now, updates):
         save(path, st)
     e = load(state / "ausgabe.json", None)
     if e and e.get("art") == "zeigen" and e.get("zeit") != st.get("gesendet"):
-        api("sendMessage", chat_id=chat, text=edition_text(e), parse_mode="HTML",
+        # silent: the display is where Tim sees it first; Telegram only holds detail and the buttons
+        api("sendMessage", chat_id=chat, text=edition_text(e), parse_mode="HTML", disable_notification=True,
             disable_web_page_preview=True, reply_markup=buttons(f"d{e['zeit']}"))
         st["gesendet"] = e["zeit"]
         st.setdefault("start", e["zeit"])
