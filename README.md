@@ -24,7 +24,7 @@ Zurzeit im **Testbetrieb** bis Tag 28, Bedingungen in [TEST.md](TEST.md).
 git clone git@github.com:timkleinke/zug37.git /root/zug37 && /root/zug37/install.sh
 ```
 
-Das Skript fragt nacheinander nach dem Deploy-Key (Logbuch nur lesen), dem Claude-Token (`claude setup-token` auf dem Mac) und optional dem Telegram-Bot. Danach macht es die erste Ausgabe und nennt die Feed-URL für die App „Zug 37“ im TickrMeter-Konto. Ein erneuter Aufruf aktualisiert alles und überspringt, was schon beantwortet ist.
+Das Skript fragt nacheinander nach dem Deploy-Key (Logbuch nur lesen), dem Claude-Token (`claude setup-token` in einem zweiten Terminal) und optional dem Telegram-Bot. Danach macht es die erste Ausgabe und nennt die Feed-URL für die App „Zug 37“ im TickrMeter-Konto. Ein erneuter Aufruf aktualisiert alles und überspringt, was schon beantwortet ist.
 
 | Was | Befehl |
 |---|---|

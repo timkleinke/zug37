@@ -149,7 +149,7 @@ fi
 # --- 2. Claude --------------------------------------------------------------------------------
 if [ -z "$(getenv CLAUDE_CODE_OAUTH_TOKEN)" ]; then
   say "2/3  Claude verbinden"
-  echo "Auf deinem Mac im Terminal: claude setup-token  →  im Browser bestätigen, Token kopieren."
+  echo "In einem zweiten Terminal (auf dem Server oder auf einem Rechner mit Claude Code): claude setup-token  →  im Browser bestätigen, Token kopieren (beide Zeilen)."
   for i in 1 2 3; do
     read_secret RAWTOKEN "Token hier einfügen (unsichtbar), dann Enter: "
     TOKEN="$(extract_token "$RAWTOKEN")"; unset RAWTOKEN
