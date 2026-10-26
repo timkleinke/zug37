@@ -4,14 +4,14 @@ Tim, 26.10.2026: Zug 37 muss erst beweisen, dass es regelmäßig Erkenntnisse li
 
 ## Bedingungen
 
-1. **28 Tage**, ab der ersten Ausgabe. **Ein Lauf am Tag** (7:30 Uhr). **Nur die Ideenbörse.** Fund, Frage und Spiegel bleiben aus.
+1. **28 Tage**, ab der ersten Ausgabe. **Vier Läufe am Tag** (7:30, 11:00, 14:30, 18:00 Uhr), jeder darf schweigen. **Ideenbörse und Fund.** Frage und Spiegel bleiben aus. *(Tim, 26.10., 11:30: zuerst ein Lauf, nur Ideenbörse; geändert, weil mehr Ausgaben mehr Bewertungen bringen und die Frage des Tests dieselbe bleibt.)*
 2. **Telegram ist das Messinstrument.** Jede Ausgabe kommt mit Detail, Quellen und drei Knöpfen: *Neu und relevant · Schon bekannt · Nicht relevant*. Überraschung allein ist noch kein Nutzen.
-3. **Sonntags der Vergleich mit Claude im normalen Chat.** Der Bot schickt die Aufgabe als Datei. Es ist wörtlich dieselbe, die die Redaktion um 7:30 Uhr bekommen hat (`aufgabe.md`), mit demselben Logbuchauszug. Tim gibt sie Claude in einem neuen Chat mit Websuche und schickt die Antwort an den Bot zurück. Bewertet wird mit denselben drei Knöpfen. Wählt der Chat Stille, zählt das wie beim Display nicht als Ausgabe.
+3. **Sonntags der Vergleich mit Claude im normalen Chat.** Der Bot schickt die Aufgabe als Datei. Es ist wörtlich dieselbe, die die Redaktion am Sonntag um 7:30 Uhr bekommen hat (`aufgabe.md`), mit demselben Logbuchauszug. Tim gibt sie Claude in einem neuen Chat mit Websuche und schickt die Antwort an den Bot zurück. Bewertet wird mit denselben drei Knöpfen. Wählt der Chat Stille, zählt das wie beim Display nicht als Ausgabe.
 4. **Nach 28 Tagen** schickt der Bot das Ergebnis. Liefert das Display häufiger Neues und Relevantes als der Chat? Wenn nicht, wird nicht weiter ausgebaut.
 
 ## Messgröße
 
-Anteil „Neu und relevant“ an allen bewerteten Ausgaben, getrennt nach Display und Chat. Stille zählt nicht als Ausgabe. Wird dasselbe zweimal angetippt, gilt das Letzte. `/stand` im Bot zeigt den Zwischenstand.
+Anteil „Neu und relevant“ an allen bewerteten Ausgaben, getrennt nach Display und Chat. Verglichen werden Anteile, nicht Mengen: Das Display liefert bis zu vier Ausgaben am Tag, der Chat eine pro Woche. Stille zählt nicht als Ausgabe. Wird dasselbe zweimal angetippt, gilt das Letzte. `/stand` im Bot zeigt den Zwischenstand.
 
 Die Daten liegen auf dem Server in `/var/lib/zug37/state/`:
 

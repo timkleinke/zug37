@@ -1,6 +1,6 @@
 """One run of the Redaktion: update the logbook checkout, ask Claude Code, check the answer, write the edition.
 
-Started by zug37-redaktion.timer once a day (test phase: 28 days, Ideenbörse only, see TEST.md). Environment:
+Started by zug37-redaktion.timer four times a day (test phase: 28 days, Ideenbörse and Fund, see TEST.md). Environment:
   Z37_STATE    state directory (default: $STATE_DIRECTORY, else ./out)
   Z37_REPO     checkout of timkleinke/tim (read-only deploy key); pulled before each run
   Z37_CLAUDE   path of the claude binary (default: claude)
@@ -28,7 +28,7 @@ TOOLS = "WebSearch"
 DENIED = "Bash Edit Write NotebookEdit Task Read Glob Grep WebFetch"
 FILES = ["redaktion/GRUENDUNG.md", "KURS.md", "ideen/README.md"]
 MAX_FILE = 20000
-RUBRIKEN = ("IDEENBÖRSE",)  # test phase: only the Ideenbörse (TEST.md)
+RUBRIKEN = ("IDEENBÖRSE", "FUND")  # test phase (TEST.md): both are news and rated the same way
 URL = re.compile(r"^https://\S{4,400}$")
 INLINE_URL = re.compile(r"(https?://|www\.)\S+")
 

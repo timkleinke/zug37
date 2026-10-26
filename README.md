@@ -8,7 +8,7 @@ Zurzeit im **Testbetrieb** bis Tag 28, Bedingungen in [TEST.md](TEST.md).
 
 | Teil | Was | Wann |
 |---|---|---|
-| Redaktion | Claude Code bekommt einen Auszug aus dem Logbuch, sucht im Netz Belege zu einer Idee und entscheidet: eine Ausgabe oder Stille. Die Antwort wird Feld für Feld geprüft und nach `ausgabe.json` geschrieben. | 7:30 Uhr |
+| Redaktion | Claude Code bekommt einen Auszug aus dem Logbuch, sucht im Netz Belege zu einer Idee oder Neues zu einem Projekt und entscheidet: eine Ausgabe oder Stille. Die Antwort wird Feld für Feld geprüft und nach `ausgabe.json` geschrieben. | 7:30, 11:00, 14:30, 18:00 Uhr |
 | Anzeige | rendert die aktuelle Ausgabe und veröffentlicht `feed.json` mit dem Frame unter `tm.mif.works/z37/<zufall>/` | alle 5 Minuten |
 | Bot | schickt jede Ausgabe nach Telegram und nimmt die Bewertung entgegen. Sonntags der Vergleich mit dem Chat, an Tag 28 das Ergebnis. | ständig |
 
