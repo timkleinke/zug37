@@ -1,5 +1,7 @@
 # Umsetzung: Aufträge an die Werkstatt
 
+> **Stopp (08.11.2026):** Vorerst nicht einrichten. Die Einrichtung folgt auf einem neuen Server.
+
 Hier legt Tim (oder Claude in Tims Namen) Aufträge an Zug 37 ab, als eine Markdown-Datei je Auftrag, Name
 `JJJJ-MM-TT_<kurzname>.md`. Die Werkstatt (`zug37-werkstatt.timer`) schaut regelmäßig nach neuen Dateien, setzt den
 ältesten offenen Auftrag mit Claude Code um, prüft, spielt ein und schreibt den Bericht daneben als
