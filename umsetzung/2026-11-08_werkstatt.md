@@ -10,21 +10,31 @@ Ein dritter Dienst neben Redaktion und Anzeige: die **Werkstatt**. Sie prüft re
 ohne Bericht liegt, setzt den ältesten davon mit Claude Code um, lässt die Tests laufen, spielt den neuen Stand ein,
 schreibt den Bericht und meldet sich bei Tim. Zug 37 hält sich damit selbst in Stand; Tim gibt nur noch Aufträge.
 
+**Fassung 2 (08.11., 18:05):** ohne root. Grund: Eine Werkstatt, die stündlich als root Code aus dem Repo umsetzt und
+einspielt, macht jeden Push in dieses (öffentliche!) Repo, der durchkommt, zu root auf dem MIF-Server. Claude Code hat
+dieselbe Bauart in `timkleinke/zentrale` zu Recht abgelehnt.
+
 ## Was die Werkstatt darf
 
-- Als root in `/root/zug37` arbeiten: Dateien ändern, Tests laufen lassen, committen, auf `main` pushen, `install.sh`
-  aufrufen (das ist der einzige Weg, wie ein Stand live geht). Nichts außerhalb von `/root/zug37`, `/opt/zug37`,
-  `/etc/zug37.env`, den `zug37-*`-Units und `/var/lib/zug37` anfassen. MIF und alle anderen Dienste auf dem Server
-  sind für sie nicht da.
-- Claude Code mit Tims Token aus `/etc/zug37.env`, Modell wie die Redaktion. Ein Lauf je Auftrag, höchstens eine
-  Nachbesserung, wenn die Tests nach dem ersten Durchgang rot sind. Danach Abbruch mit Bericht, nicht weiterflicken.
+- Als eigener Nutzer `zug37-werkstatt` (ohne Login-Shell) in einem eigenen Arbeitsklon unter
+  `/var/lib/zug37-werkstatt/` arbeiten: Dateien ändern, Tests laufen lassen, committen, auf `main` pushen (eigener
+  Deploy-Key mit Schreibrecht, gehört nur diesem Nutzer).
+- Geänderten Python-Code nach `/opt/zug37` kopieren (das Verzeichnis gehört dafür `zug37-werkstatt`, ist für `zug37` nur
+  lesbar) und per sudo genau `systemctl restart zug37-bot` auslösen; Redaktion und Anzeige sind Timer und nehmen den
+  neuen Code beim nächsten Lauf.
+- Claude Code mit einem eigenen Claude-Token in `/etc/zug37-werkstatt.env` (0600, nur dieser Nutzer). Ein Lauf je
+  Auftrag, höchstens eine Nachbesserung bei roten Tests, danach Abbruch mit Bericht.
 - Takt: einmal pro Stunde nachsehen, zwischen 7 und 22 Uhr Berlin. Läuft gerade die Redaktion, warten. Liegt kein
   offener Auftrag, nichts tun und nichts melden.
+- Ändert ein Auftrag `install.sh`, `systemd/` oder `nginx/`, pusht die Werkstatt, spielt aber nicht ein. Der Bericht sagt
+  oben: „Bitte `cd /root/zug37 && git pull && ./install.sh` ausführen“, mit Grund. Das Einrichten der Werkstatt selbst
+  (Nutzer, Rechte, Unit, sudoers) macht dieser erste Lauf als root, von Tim begleitet.
 
 ## Was die Werkstatt nicht darf
 
 - Keine Änderung an `TEST.md`, an den vier Redaktionszeiten oder an der Messgröße des Tests. Das ist Tims Sache.
-- Nichts, was Tims Token, den Telegram-Token oder den Deploy-Key sichtbar macht oder an eine andere Stelle kopiert.
+- Nichts als root. `/etc/zug37.env` (Tims Token für die Redaktion, Telegram) nicht lesen.
+- Nichts, was Tims Token, den Telegram-Token oder den Deploy-Key sichtbar macht oder an eine andere Stelle kopiert. Vor jedem Commit prüft ein Schritt ohne Modell den Diff auf Muster von Tokens und Passwörtern und bricht ab, wenn er etwas findet.
 - Keine neuen Netzzugriffe der Redaktion oder des Bots einbauen, die der Auftrag nicht ausdrücklich nennt.
 - Keine Aufträge umsetzen, die sie selbst geschrieben hat. Aufträge kommen nur per Push ins Repo.
 
