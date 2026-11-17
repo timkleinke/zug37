@@ -18,11 +18,13 @@ At most MAX_PER_DAY hints per Berlin day. Every run, filed or not, is appended t
 Mina's repo is only ever pulled, never written. Environment (defaults below):
   Z37_STATE, Z37_MINA, Z37_HINWEISE, Z37_MINA_KEY, Z37_HINWEISE_KEY, Z37_KNOWN_HOSTS, Z37_CLAUDE, Z37_MODEL
 """
+import hashlib
 import json
 import os
 import re
 import subprocess
 import sys
+from collections import Counter
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -36,6 +38,8 @@ FEEDBACK = re.compile(r"Zug37-Hinweis\s+`?([0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+
                       r"(übernommen|verworfen)\**\s*[,:;–-]?\s*(.*)", re.I)
 NOT_FOR_MINA = re.compile(r"\b(meme\w*|krypto\w*|crypto\w*|solana|bitcoin|trading|rösterei|roesterei|karl|dachmarke)\b", re.I)
 OLD_FIELD = re.compile(r"(ladepunkt|ladesäul|ladeinfrastruktur|ladestation|energiedaten)", re.I)
+CLOSED = re.compile(r"\b(erledigt|beantwortet|geschlossen|zurückgezogen)\b", re.I)
+MAX_TRIES = 3  # a question that gets no filed answer after three runs is left alone
 QUOTE = re.compile(r"[„“”\"»«]([^„“”\"»«]{1,600})[„“”\"»«]")
 
 
@@ -103,6 +107,13 @@ def log_entries(state):
     return out
 
 
+def keep(state, name, text):
+    state.mkdir(parents=True, exist_ok=True)
+    tmp = state / (name + ".tmp")
+    tmp.write_text(text)
+    os.replace(tmp, state / name)
+
+
 def append_log(state, entry):
     state.mkdir(parents=True, exist_ok=True)
     with open(state / "hinweise.jsonl", "a") as f:
@@ -160,6 +171,33 @@ def learn(state, mina_repo, now, force=False):
     return text
 
 
+def questions(text):
+    """Mina's questions in ZUG37.md: one '## ' section each. A heading with erledigt/beantwortet/geschlossen/
+    zurückgezogen is closed. The id is 'F<n>' from the heading, else a short hash of the heading."""
+    out = []
+    parts = re.split(r"^## +", text, flags=re.M)[1:]
+    for part in parts:
+        head, _, body = part.partition("\n")
+        head = head.strip()
+        if not head or CLOSED.search(head):
+            continue
+        m = re.search(r"\bF\d+\b", head)
+        qid = m.group(0) if m else "F-" + hashlib.sha1(head.encode()).hexdigest()[:8]
+        out.append({"id": qid, "titel": head[:200], "text": body.strip()[:2000]})
+    return out
+
+
+def open_question(mina, state):
+    """The first question in ZUG37.md that Zug 37 has neither answered nor tried MAX_TRIES times."""
+    log = log_entries(state)
+    answered = {e.get("frage") for e in log if e.get("art") == "abgelegt"}
+    tries = Counter(e.get("frage") for e in log if e.get("frage") and e.get("art") != "abgelegt")
+    for q in questions(read(Path(mina) / "ZUG37.md")):
+        if q["id"] not in answered and tries[q["id"]] < MAX_TRIES:
+            return q
+    return None
+
+
 def editions_since(state, since):
     """The Zug 37 editions for Tim since the last hint run: candidates, never copied as they are."""
     out = []
@@ -182,7 +220,15 @@ def slug(text):
     return t[:50].rstrip("-")
 
 
-def check(h):
+def status_of(s):
+    """'belegt' or 'Selbstauskunft/unbelegt', also from close variants; None if neither."""
+    s = s.strip().lower()
+    if "selbst" in s or "unbelegt" in s or "unklar" in s:
+        return STATI[1]
+    return STATI[0] if s.startswith("belegt") else None
+
+
+def check(h, frage=False):
     """Returns the cleaned hint or raises ValueError with the field name."""
     if not isinstance(h, dict) or h.get("art") not in ("hinweis", "stille"):
         raise ValueError("art")
@@ -203,27 +249,33 @@ def check(h):
     quellen = h.get("quellen")
     if not isinstance(quellen, list) or not 1 <= len(quellen) <= 6 or not all(isinstance(q, str) and URL.match(q) for q in quellen):
         raise ValueError("quellen")
+    quellen = list(quellen)
     out["quellen"] = quellen
     zahlen = h.get("zahlen") or []
     if not isinstance(zahlen, list) or len(zahlen) > 20:
-        raise ValueError("zahlen")
+        raise ValueError("zahlen: keine Liste")
     clean = []
-    for z in zahlen:
+    for i, z in enumerate(zahlen, 1):
         if not isinstance(z, dict):
-            raise ValueError("zahlen")
+            raise ValueError(f"zahlen {i}: kein Objekt")
         angabe, quelle, status = (str(z.get(k, "")).strip() for k in ("angabe", "quelle", "status"))
-        if not angabe or len(angabe) > 200 or status not in STATI:
-            raise ValueError("zahlen")
-        if quelle not in quellen and not re.fullmatch(r"Mina: [A-Za-z0-9_./ -]{3,60}", quelle):
-            raise ValueError("zahlen")
+        status = status_of(status)
+        if not angabe or len(angabe) > 300:
+            raise ValueError(f"zahlen {i}: angabe")
+        if not status:
+            raise ValueError(f"zahlen {i}: status")
+        if URL.match(quelle) and quelle not in quellen and len(quellen) < 6:
+            quellen.append(quelle)  # a source named only at the number still counts as a source
+        if quelle not in quellen and not (quelle.startswith("Mina:") and 6 < len(quelle) <= 100):
+            raise ValueError(f"zahlen {i}: quelle")
         clean.append({"angabe": angabe, "quelle": quelle, "status": status})
     if re.search(r"\d", out["befund"]) and not clean:
-        raise ValueError("zahlen")  # numbers in the finding, but none with source and status
+        raise ValueError("zahlen: Zahlen im Befund ohne Quelle")
     out["zahlen"] = clean
     if NOT_FOR_MINA.search(" ".join(out[k] for k in ("titel", "thema", "befund", "bedeutung"))):
         raise ValueError("thema")
-    if OLD_FIELD.search(out["titel"] + " " + out["thema"]):
-        raise ValueError("thema")  # the new round is outside charging and energy data
+    if not frage and OLD_FIELD.search(out["titel"] + " " + out["thema"]):
+        raise ValueError("thema")  # the new round is outside charging and energy data (unless Mina asked)
     for key in ("befund", "bedeutung"):
         if any(len(q.split()) > 10 for q in QUOTE.findall(out[key])) or re.search(r"^\s*>", out[key], re.M):
             raise ValueError("zitat")
@@ -239,8 +291,10 @@ def check_verdict(v):
 
 
 # --- Datei ------------------------------------------------------------------------------------------
-def render(h, day, rev, verdict):
+def render(h, day, rev, verdict, frage=None):
     quellen = "\n".join(f"  - {q}" for q in h["quellen"])
+    if frage:
+        quellen += f"\n- Frage: ZUG37.md {frage['id']}: {frage['titel']}"
     abgleich = f"Minas Stand {rev}: {verdict['urteil']}"
     if verdict["urteil"] == "korrigiert" and verdict["grund"]:
         abgleich += f" ({verdict['grund']})"
@@ -295,9 +349,15 @@ def ask(workdir, prompt, env, web):
     return json.loads(r.stdout)["result"]
 
 
-def build_prompt(stand, editions, earlier, note, now):
+def question_block(frage):
+    return (f"\n## Offene Frage von Mina (hat Vorrang)\n\nZUG37.md {frage['id']}: {frage['titel']}\n\n"
+            f"{frage['text'] or '(ohne weiteren Text)'}\n")
+
+
+def build_prompt(stand, editions, earlier, note, now, frage=None):
     local = now.astimezone(BERLIN)
     return (Path(__file__).with_name("hinweise.md").read_text()
+            + (question_block(frage) if frage else "")
             + "\n## Minas Stand\n\n" + stand
             + "\n## Neue Ausgaben von Zug 37 für Tims Display\n\n"
             + (json.dumps(editions, ensure_ascii=False, indent=1) if editions else "keine") + "\n"
@@ -307,8 +367,9 @@ def build_prompt(stand, editions, earlier, note, now):
             + f"\n## Jetzt\n\n{local:%d.%m.%Y, %H:%M} Uhr (Berlin).\n")
 
 
-def build_check_prompt(stand, hint):
+def build_check_prompt(stand, hint, frage=None):
     return (Path(__file__).with_name("abgleich.md").read_text()
+            + (question_block(frage) + "\nDer Hinweis beantwortet diese Frage. Damit passt er zur Phase.\n" if frage else "")
             + "\n## Der Hinweis\n\n```json\n" + json.dumps(hint, ensure_ascii=False, indent=1) + "\n```\n"
             + "\n## Minas Stand\n\n" + stand)
 
@@ -323,7 +384,11 @@ def main(env=os.environ, now=None, asker=ask):
     now = now or datetime.now(timezone.utc)
     stamp = now.isoformat(timespec="seconds")
 
+    frage = None
+
     def done(art, code=0, **kw):
+        if frage:
+            kw = {"frage": frage["id"], **kw}
         append_log(state, {"zeit": stamp, "art": art, **kw})
         print(f"zug37-hinweise: {art} {kw.get('datei') or kw.get('grund', '')}".strip()[:200])
         return code
@@ -342,15 +407,24 @@ def main(env=os.environ, now=None, asker=ask):
     since = datetime.fromisoformat(previous[-1]["zeit"]) if previous else now - timedelta(days=1)
     earlier = [{k: e.get(k) for k in ("zeit", "datei", "titel", "thema")} for e in log_entries(state)
                if e.get("art") == "abgelegt"][-30:]
+    frage = open_question(mina, state)  # Mina's open question comes before the own search
     workdir = state / "leer"
     workdir.mkdir(parents=True, exist_ok=True)
+
+    def asked(prompt, web, what):
+        answer = asker(workdir, prompt, env, web)
+        keep(state, f"hinweise-letzte-{what}.txt", answer)  # the raw answer of the last run, for checking errors
+        return extract(answer)
+
     try:
-        hint = check(extract(asker(workdir, build_prompt(mina_stand(mina), editions_since(state, since), earlier, note, now),
-                                   env, True)))
+        hint = check(asked(build_prompt(mina_stand(mina), editions_since(state, since), earlier, note, now, frage),
+                           True, "recherche"), bool(frage))
     except Exception as e:  # noqa: BLE001 - one line, no content
         return done("fehler", 1, grund=f"Recherche: {type(e).__name__} {e if isinstance(e, ValueError) else ''}".strip())
     if hint["art"] == "stille":
         return done("stille", grund=hint["begruendung"])
+    if frage and frage["id"] not in hint["bezug"]:
+        hint["bezug"] = f"ZUG37.md {frage['id']}; {hint['bezug']}"[:300]
 
     # Abgleich: the newest state, pulled right before the comparison
     try:
@@ -359,10 +433,12 @@ def main(env=os.environ, now=None, asker=ask):
         return done("fehler", 1, grund=f"Minas Stand vor dem Abgleich nicht aktuell: {e}"[:200], titel=hint["titel"])
     rev = mina_rev(mina, env)
     try:
-        verdict = check_verdict(extract(asker(workdir, build_check_prompt(mina_stand(mina), hint), env, False)))
+        verdict = check_verdict(asked(build_check_prompt(mina_stand(mina), hint, frage), False, "abgleich"))
         if verdict["urteil"] == "korrigiert":
-            fixed = check({**(verdict["hinweis"] or {}), "art": "hinweis"})
+            fixed = check({**(verdict["hinweis"] or {}), "art": "hinweis"}, bool(frage))
             fixed["begruendung"] = hint["begruendung"]
+            if frage and frage["id"] not in fixed["bezug"]:
+                fixed["bezug"] = f"ZUG37.md {frage['id']}; {fixed['bezug']}"[:300]
             hint = fixed
     except Exception as e:  # noqa: BLE001
         return done("fehler", 1, grund=f"Abgleich: {type(e).__name__} {e if isinstance(e, ValueError) else ''}".strip(),
@@ -375,7 +451,7 @@ def main(env=os.environ, now=None, asker=ask):
     day = now.astimezone(BERLIN)
     name = filename(ablage / "hinweise", day, hint["kurztitel"])
     try:
-        name = file_hint(ablage, render(hint, day, rev, verdict), name, ablage_key, env)
+        name = file_hint(ablage, render(hint, day, rev, verdict, frage), name, ablage_key, env)
     except (RuntimeError, OSError, subprocess.SubprocessError) as e:
         return done("fehler", 1, grund=f"Ablage: {e}"[:200], **record)
     return done("abgelegt", datei=name, **record)

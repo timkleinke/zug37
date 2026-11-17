@@ -35,7 +35,7 @@ class Check(unittest.TestCase):
             with self.assertRaises(ValueError, msg=field):
                 hinweise.check({**HINT, **bad})
         with self.assertRaises(ValueError):
-            hinweise.check({**HINT, "zahlen": [{"angabe": "6 Besucher", "quelle": "https://x.org/a", "status": "belegt"}]})
+            hinweise.check({**HINT, "zahlen": [{"angabe": "6 Besucher", "quelle": "laut Gerücht", "status": "belegt"}]})
         with self.assertRaises(ValueError):
             hinweise.check({**HINT, "titel": "Ladepunktdaten auf Apify"})
         ok = hinweise.check({**HINT, "zahlen": HINT["zahlen"] + [{"angabe": "48 bestätigte Besucher",
@@ -118,6 +118,49 @@ class Run(unittest.TestCase):
         hinweise.main(self.env, T0, self.asker([]))
         self.assertEqual(self.prompts, [])  # fourth of the day: no model call at all
         self.assertEqual(hinweise.filed_today(self.d / "state", T0), 3)
+
+    def push_mina(self, name, text):
+        src = self.d / "mina-src"
+        (src / name).write_text(text)
+        sh("git", "add", "-A", cwd=src)
+        sh("git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", name, cwd=src)
+        sh("git", "push", "-q", "origin", "HEAD:main", cwd=src)
+
+    def test_question_first_then_own_search(self):
+        self.push_mina("ZUG37.md", "# Fragen an Zug 37\n\n## F1 · offen · Wie viele Nutzer haben Ladedaten-Actors?\n"
+                                   "Gibt es bei Apify Actors zu Ladepunkten mit zahlenden Nutzern?\n\n"
+                                   "## F0 · beantwortet · alte Frage\nx\n")
+        answer = {**HINT, "titel": "Ladepunkt-Actors auf Apify haben kaum Nutzer", "kurztitel": "ladepunkt-actors"}
+        self.assertEqual(hinweise.main(self.env, T0, self.asker([answer, {"urteil": "ok"}])), 0)
+        self.assertIn("## Offene Frage von Mina (hat Vorrang)", self.prompts[0][1])
+        self.assertIn("ZUG37.md F1", self.prompts[1][1])
+        self.assertNotIn("alte Frage", self.prompts[0][1])
+        log = [json.loads(x) for x in (self.d / "state" / "hinweise.jsonl").read_text().splitlines()]
+        self.assertEqual((log[-1]["art"], log[-1]["frage"]), ("abgelegt", "F1"))
+        text = (self.d / "ablage" / "hinweise" / log[-1]["datei"]).read_text()
+        self.assertIn("- Frage: ZUG37.md F1", text)
+        self.assertIn("Bezug bei Mina: ZUG37.md F1", text)
+        self.prompts.clear()
+        hinweise.main(self.env, T0, self.asker([{"art": "stille", "begruendung": "nichts"}]))
+        self.assertNotIn("## Offene Frage von Mina", self.prompts[0][1])  # answered once is enough
+
+    def test_question_given_up_after_three_tries(self):
+        self.push_mina("ZUG37.md", "## Was zahlen Shopify-Händler für Feeds?\ntext\n")
+        for _ in range(3):
+            hinweise.main(self.env, T0, self.asker([{"art": "stille", "begruendung": "keine Quelle"}]))
+        self.assertTrue(all("## Offene Frage von Mina" in p for _, p in self.prompts))
+        self.prompts.clear()
+        hinweise.main(self.env, T0, self.asker([{"art": "stille", "begruendung": "x"}]))
+        self.assertNotIn("## Offene Frage von Mina", self.prompts[0][1])
+
+    def test_numbers_status_variants_and_source_at_number(self):
+        h = hinweise.check({**HINT, "zahlen": [
+            {"angabe": "1.200 Nutzer", "quelle": "https://apify.com/x", "status": "Selbstauskunft"},
+            {"angabe": "3 Anbieter", "quelle": "Mina: RESEARCH.md §24", "status": "belegt (gezählt)"}]})
+        self.assertEqual([z["status"] for z in h["zahlen"]], ["Selbstauskunft/unbelegt", "belegt"])
+        self.assertIn("https://apify.com/x", h["quellen"])
+        with self.assertRaisesRegex(ValueError, "zahlen 1: status"):
+            hinweise.check({**HINT, "zahlen": [{"angabe": "1", "quelle": "https://a.org/x", "status": "geschätzt"}]})
 
     def test_learn_notes_mina_feedback(self):
         hinweise.main(self.env, T0, self.asker([HINT, {"urteil": "ok"}]))

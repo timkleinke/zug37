@@ -16,6 +16,8 @@ Gute Hinweise sind zum Beispiel:
 
 **Nicht für Mina** sind Meme Radar, Krypto, Trading, Tims Kundenprojekte, Karl und die Rösterei sowie die Dachmarke. Ebenfalls nicht für Mina ist alles, was Lade- und Energiedaten wieder aufmacht.
 
+**Fragen von Mina gehen vor.** Steht unten eine „Offene Frage von Mina“, beantwortet dein Hinweis genau diese Frage, und du suchst kein eigenes Thema. Im `bezug` nennst du dann die Frage, zum Beispiel `ZUG37.md F1`. Ein Feld, nach dem Mina selbst fragt, ist erlaubt. Die Liste „Nicht für Mina“ gilt trotzdem weiter. Findest du keine Antwort mit Quelle, antworte mit Stille und schreib in `begruendung`, was fehlt.
+
 Unten stehen auch die neuen Ausgaben von Zug 37 für Tims Display. Passt eine davon zu Minas Phase, darfst du sie als Ausgangspunkt nehmen. Prüfe sie dann aber selbst nach. Passt keine, such selbst.
 
 Nur echte Funde mit Quelle. Findest du nichts, das Mina **neu** ist und zu ihrer Phase passt, antworte mit Stille. Prüfe in den bisherigen Hinweisen, was schon lief, und lege nichts zweimal ab.

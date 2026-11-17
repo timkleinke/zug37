@@ -20,6 +20,8 @@ Zurzeit im **Testbetrieb** bis Tag 28, Bedingungen in [TEST.md](TEST.md).
 - Abwechslung mit Signal Radar: Eine neue Ausgabe steht 90 Minuten allein. Danach wechseln sich Zug 37 und Signal Radar zwischen 8 und 19 Uhr alle 15 Minuten ab. Das Bild von Signal Radar kommt unverändert aus dessen Feed. Die Lampe leuchtet, wenn einer der beiden sie will.
 - Der Feed ist öffentlich unter einem zufälligen Pfad. Auf dem Display stehen deshalb nur Schlagzeilen, Namen aus `menschen/` werden abgewiesen. Details und Quellen gehen nur an Tims Telegram.
 
+**Fragen von Mina:** Mina kann in ihrem Repo eine Datei `ZUG37.md` anlegen. Jede Frage ist ein `## `-Abschnitt, zum Beispiel `## F1 · Gibt es auf Apify …?`, darunter der Text. Bei jedem Lauf liest der Hinweis-Dienst die Datei. Die erste offene Frage hat Vorrang vor der eigenen Themensuche, pro Lauf wird höchstens eine Frage bearbeitet. Die Antwort kommt als normaler Hinweis mit `ZUG37.md F1` im Bezug. Eine Frage gilt als erledigt, sobald dazu ein Hinweis abgelegt wurde oder in ihrer Überschrift erledigt, beantwortet, geschlossen oder zurückgezogen steht. Nach drei Läufen ohne abgelegte Antwort wird sie nicht mehr bearbeitet. Das Tageslimit von 3 Hinweisen gilt weiter.
+
 ## Einrichten (MIF-Server, als root)
 
 ```
@@ -35,6 +37,7 @@ Das Skript fragt nacheinander nach dem Deploy-Key (Logbuch nur lesen), dem Claud
 | letzte Ausgabe lesen | `cat /var/lib/zug37/state/ausgabe.json` |
 | Protokoll | `journalctl -u zug37-redaktion -u zug37-anzeige` |
 | jetzt ein Hinweis für Mina | `systemctl start zug37-hinweise.service` |
+| letzte Rohantworten (Fehlersuche) | `/var/lib/zug37/state/hinweise-letzte-recherche.txt`, `…-abgleich.txt` |
 | anhalten | `systemctl disable --now zug37-redaktion.timer zug37-anzeige.timer zug37-bot.service` |
 
 ## Lokal ausprobieren
