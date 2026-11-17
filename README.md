@@ -11,6 +11,7 @@ Zurzeit im **Testbetrieb** bis Tag 28, Bedingungen in [TEST.md](TEST.md).
 | Redaktion | Claude Code bekommt einen Auszug aus dem Logbuch, sucht im Netz Belege zu einer Idee oder Neues zu einem Projekt und entscheidet: eine Ausgabe oder Stille. Die Antwort wird Feld für Feld geprüft und nach `ausgabe.json` geschrieben. | 7:30, 11:00, 14:30, 18:00 Uhr |
 | Anzeige | rendert die aktuelle Ausgabe und veröffentlicht `feed.json` mit dem Frame unter `tm.mif.works/z37/<zufall>/` | alle 5 Minuten |
 | Bot | schickt jede Ausgabe nach Telegram und nimmt die Bewertung entgegen. Sonntags der Vergleich mit dem Chat, an Tag 28 das Ergebnis. | ständig |
+| Hinweise für Mina | holt Minas Stand (`timkleinke/mina`, nur lesen), sucht einen Fund passend zu Minas aktueller Phase (die neuen Ausgaben der Redaktion sind Kandidaten), gleicht ihn in einem zweiten Aufruf ohne Werkzeuge mit STATUS, EXPERIMENTS und DECISIONS ab und legt ihn als `hinweise/JJJJ-MM-TT-kurztitel.md` in `timkleinke/zug37-hinweise` ab. Höchstens 3 am Tag. Einmal pro Woche liest er Minas Rückmeldungen aus DECISIONS.md. Protokoll: `state/hinweise.jsonl`. | 9:00, 13:00, 20:00 Uhr |
 
 - Die Redaktion hat nur die Websuche: kein Dateizugriff, kein Abruf von Seiten, keine Shell. Sie läuft in einem leeren Verzeichnis ohne Projekt-Settings. Das Logbuch kommt über einen Deploy-Key, der nur lesen darf.
 - Die Anzeige hat kein Netz. Der Bot spricht nur mit Telegram und ruft kein Modell auf.
@@ -33,6 +34,7 @@ Das Skript fragt nacheinander nach dem Deploy-Key (Logbuch nur lesen), dem Claud
 | Vorschau-Links fürs TickrMeter-Konto | `/root/zug37/vorschau.sh` |
 | letzte Ausgabe lesen | `cat /var/lib/zug37/state/ausgabe.json` |
 | Protokoll | `journalctl -u zug37-redaktion -u zug37-anzeige` |
+| jetzt ein Hinweis für Mina | `systemctl start zug37-hinweise.service` |
 | anhalten | `systemctl disable --now zug37-redaktion.timer zug37-anzeige.timer zug37-bot.service` |
 
 ## Lokal ausprobieren

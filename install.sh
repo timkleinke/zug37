@@ -228,6 +228,27 @@ if [ ! -f "$HOMEDIR/state/ausgabe.json" ]; then
   python3 -c "import json; e=json.load(open('$HOMEDIR/state/ausgabe.json')); print('→', e.get('rubrik',''), e.get('zeile', e.get('art')))"
 fi
 
+# --- Hinweise für Mina (eigener Schritt, eigene Schlüssel) ----------------------------------------
+# mina_ro: read-only deploy key on timkleinke/mina. hinweise_rw: deploy key with write access on
+# timkleinke/zug37-hinweise, the only repo Zug 37 writes to. The timer runs only when both checkouts exist.
+for k in mina_ro hinweise_rw; do
+  [ -f "$HOMEDIR/.ssh/$k" ] || sudo -u zug37 ssh-keygen -q -t ed25519 -N "" -C "zug37 $k" -f "$HOMEDIR/.ssh/$k"
+done
+hclone() {  # repo dir key
+  [ -d "$HOMEDIR/$2/.git" ] && return 0
+  sudo -u zug37 env GIT_SSH_COMMAND="ssh -i $HOMEDIR/.ssh/$3 -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOMEDIR/.ssh/known_hosts" \
+    git clone -q "git@github.com:timkleinke/$1.git" "$HOMEDIR/$2" 2>/dev/null
+}
+if hclone mina mina mina_ro && hclone zug37-hinweise hinweise hinweise_rw; then
+  systemctl enable --now zug37-hinweise.timer >/dev/null 2>&1
+else
+  systemctl disable --now zug37-hinweise.timer >/dev/null 2>&1 || true
+  say "Hinweise für Mina laufen noch nicht: es fehlt ein Deploy-Key auf GitHub."
+  [ -d "$HOMEDIR/mina/.git" ] || { echo "timkleinke/mina, Titel „zug37 (nur lesen)“, OHNE Schreibrecht:"; cat "$HOMEDIR/.ssh/mina_ro.pub"; }
+  [ -d "$HOMEDIR/hinweise/.git" ] || { echo "timkleinke/zug37-hinweise, Titel „zug37 (schreiben)“, MIT Schreibrecht:"; cat "$HOMEDIR/.ssh/hinweise_rw.pub"; }
+  echo "Danach ./install.sh erneut starten."
+fi
+
 say "Fertig ($REV)."
 echo "Letzter Schritt im TickrMeter-Konto: neue App „Zug 37“, Feed-URL:"
 echo "  ${URL}feed.json"

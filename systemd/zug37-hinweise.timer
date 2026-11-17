@@ -1,0 +1,12 @@
+[Unit]
+Description=Zug 37 Hinweise für Mina three times a day (between the Redaktion runs, at most 3 hints a day)
+
+[Timer]
+OnCalendar=*-*-* 09:00:00 Europe/Berlin
+OnCalendar=*-*-* 13:00:00 Europe/Berlin
+OnCalendar=*-*-* 20:00:00 Europe/Berlin
+RandomizedDelaySec=10min
+Unit=zug37-hinweise.service
+
+[Install]
+WantedBy=timers.target

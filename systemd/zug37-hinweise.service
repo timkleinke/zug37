@@ -1,0 +1,48 @@
+# Zug 37: Hinweise für Mina. Pulls Mina's repo (read-only deploy key), asks Claude Code (web only, then a
+# comparison without tools), files the hint in timkleinke/zug37-hinweise (write deploy key, only that repo).
+[Unit]
+Description=Zug 37 Hinweise für Mina
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=zug37
+Group=zug37
+StateDirectory=zug37
+StateDirectoryMode=0700
+UMask=0077
+EnvironmentFile=/etc/zug37.env
+Environment=HOME=/var/lib/zug37
+Environment=DISABLE_AUTOUPDATER=1
+Environment=Z37_MINA=/var/lib/zug37/mina
+Environment=Z37_HINWEISE=/var/lib/zug37/hinweise
+Environment=Z37_MINA_KEY=/var/lib/zug37/.ssh/mina_ro
+Environment=Z37_HINWEISE_KEY=/var/lib/zug37/.ssh/hinweise_rw
+UnsetEnvironment=Z37_TG_TOKEN
+WorkingDirectory=/opt/zug37
+ExecStart=/usr/bin/python3 -s -B -m zug37.hinweise
+TimeoutStartSec=40min
+MemoryMax=2G
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+LockPersonality=yes
+ProtectProc=invisible
+ProtectKernelLogs=yes
+RestrictNamespaces=yes
+RestrictSUIDSGID=yes
+# nothing on this machine or in private networks, only the internet
+IPAddressDeny=localhost link-local multicast 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 fc00::/7
+TemporaryFileSystem=/opt:ro
+BindReadOnlyPaths=/opt/zug37
+BindReadOnlyPaths=/run/systemd/resolve/resolv.conf:/run/systemd/resolve/stub-resolv.conf
+# Tim's logbook and its key are not needed here; Mina's checkout is only read
+InaccessiblePaths=-/var/lib/zug37/tim -/var/lib/zug37/.ssh/id_ed25519
+InaccessiblePaths=-/etc/nginx -/etc/letsencrypt -/var/www -/srv

@@ -42,3 +42,5 @@ BindReadOnlyPaths=/opt/zug37
 # localhost is blocked, so the DNS stub 127.0.0.53 is too: resolve through the host's upstream servers
 BindReadOnlyPaths=/run/systemd/resolve/resolv.conf:/run/systemd/resolve/stub-resolv.conf
 InaccessiblePaths=-/etc/nginx -/etc/letsencrypt -/var/www -/srv
+# the keys and checkouts of the Hinweise for Mina are not needed here
+InaccessiblePaths=-/var/lib/zug37/.ssh/mina_ro -/var/lib/zug37/.ssh/hinweise_rw -/var/lib/zug37/mina -/var/lib/zug37/hinweise

@@ -10,7 +10,7 @@ User=zug37
 Group=zug37
 # no StateDirectory: only state/ is writable, the deploy key, Claude settings and the logbook are hidden
 ReadWritePaths=/var/lib/zug37/state
-InaccessiblePaths=-/var/lib/zug37/.ssh -/var/lib/zug37/.claude -/var/lib/zug37/.claude.json -/var/lib/zug37/tim
+InaccessiblePaths=-/var/lib/zug37/.ssh -/var/lib/zug37/.claude -/var/lib/zug37/.claude.json -/var/lib/zug37/tim -/var/lib/zug37/mina -/var/lib/zug37/hinweise
 Environment=Z37_STATE=/var/lib/zug37/state
 UMask=0077
 EnvironmentFile=/etc/zug37.env
