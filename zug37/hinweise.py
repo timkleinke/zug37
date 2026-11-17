@@ -336,9 +336,26 @@ def file_hint(repo, text, name, key, env):
 
 
 # --- Claude -----------------------------------------------------------------------------------------
-def ask(workdir, prompt, env, web):
-    cmd = [env.get("Z37_CLAUDE", "claude"), "-p", "--output-format", "json", "--max-turns", "40" if web else "3",
+S = {"type": "string"}
+HINT_SCHEMA = {"type": "object", "required": ["art", "begruendung"], "properties": {
+    "art": {"type": "string", "enum": ["hinweis", "stille"]}, "titel": S, "kurztitel": S, "thema": S,
+    "quellen": {"type": "array", "items": S}, "bezug": S, "befund": S, "bedeutung": S, "begruendung": S,
+    "zahlen": {"type": "array", "items": {"type": "object", "required": ["angabe", "quelle", "status"], "properties": {
+        "angabe": S, "quelle": S, "status": {"type": "string", "enum": list(STATI)}}}}}}
+VERDICT_SCHEMA = {"type": "object", "required": ["urteil", "grund"], "properties": {
+    "urteil": {"type": "string", "enum": ["ok", "korrigiert", "verworfen"]}, "grund": S,
+    "pruefungen": {"type": "array", "items": {"type": "object", "properties": {
+        "behauptung": S, "minas_stand": S, "ergebnis": S}}},
+    "hinweis": {"anyOf": [{"type": "null"}, HINT_SCHEMA]}}}
+
+
+def ask(workdir, prompt, env, web, schema=None):
+    """Claude Code in print mode. With a schema the answer is structured output (no hand-written JSON that can
+    break on a quotation mark); it is returned as a ```json block, like a free answer."""
+    cmd = [env.get("Z37_CLAUDE", "claude"), "-p", "--output-format", "json", "--max-turns", "40" if web else "5",
            "--setting-sources", "user", "--strict-mcp-config"]
+    if schema:
+        cmd += ["--json-schema", json.dumps(schema)]
     cmd += ["--allowedTools", "WebSearch", "--disallowedTools", DENIED] if web else ["--tools", ""]
     if env.get("Z37_MODEL"):
         cmd += ["--model", env["Z37_MODEL"]]
@@ -346,7 +363,10 @@ def ask(workdir, prompt, env, web):
     r = subprocess.run(cmd, cwd=workdir, input=prompt, capture_output=True, text=True, timeout=1500, env=clean)
     if r.returncode != 0:
         raise RuntimeError(f"claude exit {r.returncode}")
-    return json.loads(r.stdout)["result"]
+    out = json.loads(r.stdout)
+    if schema and isinstance(out.get("structured_output"), dict):
+        return "```json\n" + json.dumps(out["structured_output"], ensure_ascii=False, indent=1) + "\n```"
+    return out["result"]
 
 
 def question_block(frage):
@@ -412,7 +432,7 @@ def main(env=os.environ, now=None, asker=ask):
     workdir.mkdir(parents=True, exist_ok=True)
 
     def asked(prompt, web, what):
-        answer = asker(workdir, prompt, env, web)
+        answer = asker(workdir, prompt, env, web, schema=HINT_SCHEMA if what == "recherche" else VERDICT_SCHEMA)
         keep(state, f"hinweise-letzte-{what}.txt", answer)  # the raw answer of the last run, for checking errors
         return extract(answer)
 

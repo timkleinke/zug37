@@ -84,7 +84,7 @@ class Run(unittest.TestCase):
         self.prompts = []
 
     def asker(self, answers):
-        def ask(workdir, prompt, env, web):
+        def ask(workdir, prompt, env, web, schema=None):
             self.prompts.append((web, prompt))
             return "```json\n" + json.dumps(answers.pop(0), ensure_ascii=False) + "\n```"
         return ask
