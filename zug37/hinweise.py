@@ -1,6 +1,6 @@
 """Hinweise für Mina: ein Fund von außen, mit Minas Stand abgeglichen, als Datei in timkleinke/zug37-hinweise.
 
-Started by zug37-hinweise.timer three times a day, apart from the Redaktion. The Redaktion, its prompt and the
+Started by zug37-hinweise.timer once a day (13:00, Tim 18.11.; review after a week), apart from the Redaktion. The Redaktion, its prompt and the
 Telegram messages stay untouched. One run:
 
   1. git pull of Mina's repo (read-only deploy key) and of the Ablage (write deploy key).
