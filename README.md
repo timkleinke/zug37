@@ -20,6 +20,8 @@ Zurzeit im **Testbetrieb** bis Tag 28, Bedingungen in [TEST.md](TEST.md).
 - Abwechslung mit Signal Radar: Eine neue Ausgabe steht 90 Minuten allein. Danach wechseln sich Zug 37 und Signal Radar zwischen 8 und 19 Uhr alle 15 Minuten ab. Das Bild von Signal Radar kommt unverändert aus dessen Feed. Die Lampe leuchtet, wenn einer der beiden sie will.
 - Der Feed ist öffentlich unter einem zufälligen Pfad. Auf dem Display stehen deshalb nur Schlagzeilen, Namen aus `menschen/` werden abgewiesen. Details und Quellen gehen nur an Tims Telegram.
 
+**Zahlen in Hinweisen:** Jede Zahl steht mit Quelle und einer von drei Stufen im Hinweis. `Primärquelle` heißt, die Zahl stammt vom Anbieter, von der Behörde, von der Plattform selbst oder aus Minas eigenen Dateien. `Drittauswertung` heißt, ein Artikel, Blog oder die Analyse eines Dritten hat sie ermittelt. `Selbstauskunft/unbelegt` heißt, jemand sagt sie über sich selbst ohne Prüfmöglichkeit, oder die Herkunft ist unklar. Die frühere Stufe „belegt“ wird abgewiesen (Tim, 18.11.).
+
 **Fragen von Mina:** Mina kann in ihrem Repo eine Datei `ZUG37.md` anlegen. Jede Frage ist ein `## `-Abschnitt, zum Beispiel `## F1 · Gibt es auf Apify …?`, darunter der Text. Bei jedem Lauf liest der Hinweis-Dienst die Datei. Die erste offene Frage hat Vorrang vor der eigenen Themensuche, pro Lauf wird höchstens eine Frage bearbeitet. Die Antwort kommt als normaler Hinweis mit `ZUG37.md F1` im Bezug. Eine Frage gilt als erledigt, sobald dazu ein Hinweis abgelegt wurde oder in ihrer Überschrift erledigt, beantwortet, geschlossen oder zurückgezogen steht. Nach drei Läufen ohne abgelegte Antwort wird sie nicht mehr bearbeitet. Das Tageslimit von 3 Hinweisen gilt weiter.
 
 ## Einrichten (MIF-Server, als root)

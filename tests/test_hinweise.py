@@ -13,7 +13,7 @@ HINT = {"art": "hinweis", "titel": "Apify Store zeigt zahlende Nutzer je Actor",
         "thema": "Apify Store: sichtbare Nachfrage", "quellen": ["https://apify.com/store"],
         "bezug": "DECISIONS 17.11. Kurskorrektur Punkt 3",
         "befund": "Im Apify Store steht bei jedem Actor die Zahl der monatlichen Nutzer, darunter 1.200 bei einem Beispiel.",
-        "zahlen": [{"angabe": "1.200 monatliche Nutzer", "quelle": "https://apify.com/store", "status": "belegt"}],
+        "zahlen": [{"angabe": "1.200 monatliche Nutzer", "quelle": "https://apify.com/store", "status": "Primärquelle"}],
         "bedeutung": "Mina könnte prüfen, ob eine Nische mit wenigen Anbietern und vielen Nutzern zu ihr passt.",
         "begruendung": "passt zur Kandidatenrunde"}
 
@@ -35,11 +35,11 @@ class Check(unittest.TestCase):
             with self.assertRaises(ValueError, msg=field):
                 hinweise.check({**HINT, **bad})
         with self.assertRaises(ValueError):
-            hinweise.check({**HINT, "zahlen": [{"angabe": "6 Besucher", "quelle": "laut Gerücht", "status": "belegt"}]})
+            hinweise.check({**HINT, "zahlen": [{"angabe": "6 Besucher", "quelle": "laut Gerücht", "status": "Primärquelle"}]})
         with self.assertRaises(ValueError):
             hinweise.check({**HINT, "titel": "Ladepunktdaten auf Apify"})
         ok = hinweise.check({**HINT, "zahlen": HINT["zahlen"] + [{"angabe": "48 bestätigte Besucher",
-                                                                  "quelle": "Mina: STATUS.md", "status": "belegt"}]})
+                                                                  "quelle": "Mina: STATUS.md", "status": "Primärquelle"}]})
         self.assertEqual(len(ok["zahlen"]), 2)
 
     def test_feedback_lines(self):
@@ -104,7 +104,7 @@ class Run(unittest.TestCase):
         text = (self.d / "check" / "hinweise" / name).read_text()
         self.assertIn("## Mögliche Bedeutung für Mina", text)
         self.assertIn("korrigiert (Besucherzahl war alt)", text)
-        self.assertIn("1.200 monatliche Nutzer. Quelle: https://apify.com/store. belegt", text)
+        self.assertIn("1.200 monatliche Nutzer. Quelle: https://apify.com/store. Primärquelle", text)
         self.assertNotIn("Ablage", [p.name for p in (self.d / "mina").iterdir()])
 
     def test_rejected_and_daily_limit(self):
@@ -156,8 +156,11 @@ class Run(unittest.TestCase):
     def test_numbers_status_variants_and_source_at_number(self):
         h = hinweise.check({**HINT, "zahlen": [
             {"angabe": "1.200 Nutzer", "quelle": "https://apify.com/x", "status": "Selbstauskunft"},
-            {"angabe": "3 Anbieter", "quelle": "Mina: RESEARCH.md §24", "status": "belegt (gezählt)"}]})
-        self.assertEqual([z["status"] for z in h["zahlen"]], ["Selbstauskunft/unbelegt", "belegt"])
+            {"angabe": "3 Anbieter", "quelle": "Mina: RESEARCH.md §24", "status": "Primärquelle (gezählt)"},
+            {"angabe": "26 Mio. Nutzer", "quelle": "https://dev.to/x", "status": "Drittauswertung"}]})
+        self.assertEqual([z["status"] for z in h["zahlen"]], ["Selbstauskunft/unbelegt", "Primärquelle", "Drittauswertung"])
+        with self.assertRaisesRegex(ValueError, "zahlen 1: status"):  # the old two-level label is no longer enough
+            hinweise.check({**HINT, "zahlen": [{"angabe": "1", "quelle": "https://a.org/x", "status": "belegt"}]})
         self.assertIn("https://apify.com/x", h["quellen"])
         with self.assertRaisesRegex(ValueError, "zahlen 1: status"):
             hinweise.check({**HINT, "zahlen": [{"angabe": "1", "quelle": "https://a.org/x", "status": "geschätzt"}]})

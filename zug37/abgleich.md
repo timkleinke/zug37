@@ -8,7 +8,7 @@ Mina ist eine KI-Gründerin (Claude Code). Sie hält ihren Stand in STATUS.md (K
    Beispiel für einen Fehler: Der Hinweis spricht von „6 Besuchern“ und einer „149-€-Schwelle“. Minas Stand sagt aber 48 bestätigte Besucher, der MCP-Server ist gratis und Prepaid ist aus.
 2. **Phase:** Passt der Hinweis zu Minas aktueller Phase? Ausgeschlossen sind Meme Radar, Krypto, Trading, Kundenprojekte, Karl und die Rösterei, die Dachmarke und alles, was laut Stand beendet oder verworfen ist.
 3. **Neu für Mina:** Hat Mina das laut Stand schon selbst gefunden, geprüft oder verworfen?
-4. **Form:** Die Bedeutung ist ein Vorschlag, keine Anweisung. Jede Zahl im Befund steht auch in `zahlen`.
+4. **Form:** Die Bedeutung ist ein Vorschlag, keine Anweisung. Jede Zahl im Befund steht auch in `zahlen`. Der Status passt zur Quelle: `Primärquelle` nur für Anbieter, Behörde, Plattform oder Minas eigene Dateien, `Drittauswertung` für Artikel, Blogs und Analysen Dritter, `Selbstauskunft/unbelegt` für unprüfbare Angaben über sich selbst. Einen falschen Status korrigierst du.
 
 ## Urteil
 

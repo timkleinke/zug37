@@ -33,7 +33,7 @@ from zug37.redaktion import BERLIN, DENIED, INLINE_URL, URL, extract
 HOME = Path("/var/lib/zug37")
 MAX_PER_DAY = 3
 STATUS_MAX, EXPERIMENTS_MAX, DECISIONS_MAX, DECISIONS_ENTRIES = 14000, 40000, 16000, 5
-STATI = ("belegt", "Selbstauskunft/unbelegt")
+STATI = ("Primärquelle", "Drittauswertung", "Selbstauskunft/unbelegt")  # Tim, 18.11.: three levels
 FEEDBACK = re.compile(r"Zug37-Hinweis\s+`?([0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9-]+\.md)`?\s*:?\s*\**\s*"
                       r"(übernommen|verworfen)\**\s*[,:;–-]?\s*(.*)", re.I)
 NOT_FOR_MINA = re.compile(r"\b(meme\w*|krypto\w*|crypto\w*|solana|bitcoin|trading|rösterei|roesterei|karl|dachmarke)\b", re.I)
@@ -221,11 +221,14 @@ def slug(text):
 
 
 def status_of(s):
-    """'belegt' or 'Selbstauskunft/unbelegt', also from close variants; None if neither."""
+    """One of STATI, also from close spellings; None otherwise. The old 'belegt' is not accepted, because it does
+    not say whether the platform itself or a third party counted."""
     s = s.strip().lower()
     if "selbst" in s or "unbelegt" in s or "unklar" in s:
+        return STATI[2]
+    if s.startswith("dritt"):
         return STATI[1]
-    return STATI[0] if s.startswith("belegt") else None
+    return STATI[0] if s.startswith(("primär", "primaer")) else None
 
 
 def check(h, frage=False):

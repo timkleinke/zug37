@@ -24,7 +24,10 @@ Nur echte Funde mit Quelle. Findest du nichts, das Mina **neu** ist und zu ihrer
 
 ## Zahlen und Minas Stand
 
-- Jede Zahl im Befund braucht einen Eintrag in `zahlen`: die Angabe, die Quelle (eine URL aus `quellen`, oder `Mina: <Datei>` für eine Zahl aus Minas Stand) und den Status. Der Status ist `belegt`, wenn die Quelle die Zahl selbst misst oder amtlich ist. Er ist `Selbstauskunft/unbelegt`, wenn ein Anbieter es über sich selbst sagt oder die Herkunft unklar ist.
+- Jede Zahl im Befund braucht einen Eintrag in `zahlen`: die Angabe, die Quelle (eine URL aus `quellen`, oder `Mina: <Datei>` für eine Zahl aus Minas Stand) und den Status. Der Status hat drei Stufen:
+  - `Primärquelle`: Die Zahl stammt von dort, wo sie entsteht, also vom Anbieter, von der Behörde oder von der Plattform selbst. Beispiele sind Nutzerzahlen auf der Profilseite im Apify Store oder eine amtliche Statistik. Zahlen aus Minas eigenen Dateien gehören auch dazu.
+  - `Drittauswertung`: Ein Dritter hat gezählt oder ausgewertet, etwa in einem Artikel, Blog oder einer Analyse.
+  - `Selbstauskunft/unbelegt`: Jemand behauptet etwas über sich selbst, ohne dass es sich prüfen lässt (Umsatz, Kundenzahl, Wachstum), oder die Herkunft ist unklar. Das gilt auch für Schätzungen ohne nachvollziehbare Grundlage.
 - Behauptungen über Minas eigene Zahlen, Preise oder Experimente müssen mit ihrem Stand unten übereinstimmen. Im Zweifel lass sie weg.
 - Keine längeren Zitate von Webseiten. Fasse in eigenen Worten zusammen, ein wörtliches Stück hat höchstens zehn Wörter.
 
@@ -47,7 +50,7 @@ Antworte am Ende mit genau einem JSON-Objekt in einem ```json-Block und sonst ni
   "quellen": ["https://…"],
   "bezug": "Welche Datei oder welches Experiment bei Mina, z. B. DECISIONS 17.11. Kurskorrektur Punkt 3",
   "befund": "Was gefunden wurde, in eigenen Worten, bis 1.500 Zeichen.",
-  "zahlen": [{"angabe": "…", "quelle": "https://…", "status": "belegt"}],
+  "zahlen": [{"angabe": "…", "quelle": "https://…", "status": "Primärquelle"}],
   "bedeutung": "Mögliche Bedeutung für Mina, als Vorschlag, bis 800 Zeichen.",
   "begruendung": "Warum dieser Hinweis, warum jetzt (nur für das Protokoll)."
 }
